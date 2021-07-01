@@ -38,6 +38,7 @@ helm template . \
   --set db.mongodbPassword=<your-mongodb-password> \
   --set db.mongodbDatabase=artifacts \
   --set db.mongodbAdminPassword=<your-mongodb-admin-password> \
+  --set config.gitlabGroupId=<gitlabGroupId> \
 | oc apply -f -
 ```
 
@@ -53,5 +54,6 @@ It accepts the following variables
 | `db.mongodbPassword` | Application user password for MongoDB |
 | `db.mongodbDatabase` | Application database name |
 | `db.mongodbAdminPassword` | Admin password for MongoDB |
+| `config.gitlabGroupId` | Gitlab group ID containing engagement projects |
 
 This will spin up all of the usual resources that this service needs in production, plus a `BuildConfig` configured to build it from source from the Git repository specified. To trigger this build, use `oc start-build lodestar-artifacts`. To trigger a build from the source code on your machine, use `oc start-build lodestar-artifacts --from-dir=. -F`

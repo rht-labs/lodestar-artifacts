@@ -25,3 +25,6 @@ api:
 
 tokens:
   gitlab: nope
+
+config:
+  gitlabGroupId: 0

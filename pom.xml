@@ -67,6 +67,11 @@
 			<groupId>io.quarkus</groupId>
 			<artifactId>quarkus-rest-client</artifactId>
 		</dependency>
+		<!-- Health -->
+		<dependency>
+			<groupId>io.quarkus</groupId>
+			<artifactId>quarkus-smallrye-health</artifactId>
+		</dependency>
 		<!-- Other -->
 		<dependency>
 			<groupId>io.quarkus</groupId>

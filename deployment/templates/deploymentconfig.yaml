@@ -29,9 +29,9 @@ spec:
       containers:
       - envFrom:
         - secretRef:
-            name: lodestar-backend-configuration
+            name: lodestar-artifacts-configuration
         env:
-        - name: LODESTAR_BACKEND_GIT_TAG
+        - name: LODESTAR_ARTIFACTS_GIT_TAG
           value: {{ .Values.imageTag }}
         readinessProbe:
           httpGet:
