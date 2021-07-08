@@ -9,9 +9,9 @@ import lombok.Data;
 @Builder
 public class ArtifactCount {
 
-	@Builder.Default
-	private Long count = 0l;
-	@Builder.Default
-	private Optional<String> engagementId = Optional.empty();
+    @Builder.Default
+    private Long count = 0l;
+    @Builder.Default
+    private Optional<String> engagementId = Optional.empty();
 
 }

@@ -11,7 +11,7 @@ import org.eclipse.microprofile.rest.client.ext.ResponseExceptionMapper;
 @Priority(4000)
 public class GitLabApiExceptionMapper implements ResponseExceptionMapper<RuntimeException> {
 
-	@Override
+    @Override
     public RuntimeException toThrowable(Response response) {
         int status = response.getStatus();
 

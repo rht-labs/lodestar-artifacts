@@ -34,7 +34,7 @@ class ArtifactTest {
 
 	@Test
 	void testCountAllArtifacts() {
-		assertEquals(4, Artifact.countAllArtifacts().getCount());
+		assertEquals(2, Artifact.countAllArtifacts().getCount());
 	}
 
 	@Test
@@ -81,7 +81,7 @@ class ArtifactTest {
 
 	@Test
 	void testRemoveAllArtifacts() {
-		assertEquals(4, Artifact.removeAllArtifacts());
+		assertEquals(2, Artifact.removeAllArtifacts());
 	}
 
 }

@@ -2,6 +2,8 @@ package com.redhat.labs.lodestar.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +13,10 @@ import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.bind.Jsonb;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.javers.core.ChangesByObject;
 import org.javers.core.Javers;
 import org.javers.core.JaversBuilder;
@@ -20,252 +25,372 @@ import org.javers.core.diff.ListCompareAlgorithm;
 
 import com.redhat.labs.lodestar.model.Artifact;
 import com.redhat.labs.lodestar.model.ArtifactCount;
+import com.redhat.labs.lodestar.model.Engagement;
 import com.redhat.labs.lodestar.model.GetListOptions;
 import com.redhat.labs.lodestar.model.GetOptions;
-import com.redhat.labs.lodestar.model.gitlab.Project;
+import com.redhat.labs.lodestar.model.gitlab.File;
+import com.redhat.labs.lodestar.rest.client.EngagementApiRestClient;
+import com.redhat.labs.lodestar.rest.client.GitlabRestClient;
 
 @ApplicationScoped
 public class ArtifactService {
 
-	@Inject
-	GitService gitService;
+    @ConfigProperty(name = "artifacts.file", defaultValue = "artifacts.json")
+    private String artifactsFile;
 
-	private static final Javers JAVERS = JaversBuilder.javers()
-			.withListCompareAlgorithm(ListCompareAlgorithm.LEVENSHTEIN_DISTANCE).build();
+    @ConfigProperty(name = "default.branch")
+    String defaultBranch;
 
-	/**
-	 * Remove all {@link Artifact}s from the database.
-	 */
-	public void purge() {
-		Artifact.removeAllArtifacts();
-	}
+    @ConfigProperty(name = "default.commit.message")
+    String defaultCommitMessage;
 
-	/**
-	 * Fetches all {@link Artifact}s from all projects in the configured Git group
-	 * and inserts into the database.
-	 */
-	public void refresh() {
+    @ConfigProperty(name = "default.author.name")
+    String defaultAuthorName;
 
-		// get all projects
-		List<Project> projects = gitService.getProjectsByGroup(true);
+    @ConfigProperty(name = "default.author.email")
+    String defaultAuthorEmail;
 
-		// get artifacts for each project and persist
-		projects.parallelStream().map(gitService::createProjectTree).map(gitService::getArtifactsFile)
-				.map(gitService::parseFile).flatMap(Collection::stream).forEach(a -> {
+    @Inject
+    @RestClient
+    GitlabRestClient gitlabRestClient;
 
-					// set uuid if missing
-					if (null == a.getUuid()) {
-						a.setUuid(UUID.randomUUID().toString());
-					}
+    @Inject
+    @RestClient
+    EngagementApiRestClient engagementRestClient;
 
-					// persist the artifact
-					createOrUpdateArtifact(a);
+    @Inject
+    Jsonb jsonb;
 
-				});
+    private static final Javers JAVERS = JaversBuilder.javers()
+            .withListCompareAlgorithm(ListCompareAlgorithm.LEVENSHTEIN_DISTANCE).build();
 
-	}
+    /**
+     * Remove all {@link Artifact}s from the database.
+     */
+    public void purge() {
+        Artifact.removeAllArtifacts();
+    }
 
-	/**
-	 * Processes the given {@link List} of {@link Artifact}s. The artifacts will be
-	 * split based on engagement uuid. Each {@link List} of engagement
-	 * {@link Artifact}s will be updated in both the database and Git.
-	 * 
-	 * @param artifacts
-	 * @param authorEmail
-	 * @param authorName
-	 */
-	public void process(List<Artifact> artifacts, Optional<String> authorEmail, Optional<String> authorName) {
+    /**
+     * Fetches all {@link Artifact}s from all projects in the configured Git group
+     * and inserts into the database.
+     */
+    public void refresh() {
 
-		// split by engagement uuid and process each resulting artifact list
-		processArtifacts(artifacts).entrySet().parallelStream().forEach(e -> {
+        engagementRestClient.getAllEngagementProjects().stream().map(Engagement::getProjectId)
+                .map(this::getArtifactsFileByProjectId).map(this::parseArtifactsFile).flatMap(Collection::stream)
+                .forEach(a -> {
 
-			// modify artifacts in db
-			String changeLog = modifyArtifactsByEngagementUuid(e.getKey(), e.getValue());
-			// create commit message
-			String commitMessage = new StringBuilder("Changed Engagement Artifacts\n").append(changeLog).toString();
+                    // set uuid if missing
+                    if (null == a.getUuid()) {
+                        a.setUuid(UUID.randomUUID().toString());
+                    }
 
-			// pull latest artifacts from db
-			List<Artifact> latest = Artifact.findAllByEngagementUuid(e.getKey());
-			// send to git to update file
-			gitService.createOrUpdateArtifactsFile(e.getKey(), latest, authorEmail, authorName,
-					Optional.ofNullable(commitMessage));
+                    // persist the artifact
+                    createOrUpdateArtifact(a);
 
-		});
+                });
 
-	}
+    }
 
-	/**
-	 * Returns a {@link List} of {@link Artifact}s matching the specified
-	 * {@link GetListOptions}.
-	 * 
-	 * @param options
-	 * @return
-	 */
-	public List<Artifact> getArtifacts(GetListOptions options) {
+    /**
+     * Returns a {@link File} containing the artifacts content. Otherwise, null is
+     * returned.
+     * 
+     * @param projectId
+     * @return
+     */
+    File getArtifactsFileByProjectId(long projectId) {
+        return gitlabRestClient.getFile(projectId, artifactsFile, defaultBranch);
+    }
 
-		Optional<String> engagementUuid = options.getEngagementUuid();
+    /**
+     * Returns a {@link List} of {@link Artifact}s for the given {@link File}. An
+     * empty {@link List} is returned if {@link File} or its contents are null or
+     * blank.
+     * 
+     * @param file
+     * @return
+     */
+    List<Artifact> parseArtifactsFile(File file) {
 
-		return engagementUuid.isPresent()
-				? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
-						options.getPageSize())
-				: Artifact.pagedArtifacts(options.getPage(), options.getPageSize());
+        if (null == file || null == file.getContent() || file.getContent().isBlank()) {
+            return new ArrayList<>();
+        }
 
-	}
+        file.decodeFileAttributes();
+        return Arrays.asList(jsonb.fromJson(file.getContent(), Artifact[].class));
 
-	/**
-	 * Returns a {@link ArtifactCount} with the count of {@link Artifact}s matching
-	 * the specified {@link GetOptions}.
-	 * 
-	 * @param options
-	 * @return
-	 */
-	public ArtifactCount countArtifacts(GetOptions options) {
+    }
 
-		Optional<String> engagementUuid = options.getEngagementUuid();
+    /**
+     * Processes the given {@link List} of {@link Artifact}s. The artifacts will be
+     * split based on engagement uuid. Each {@link List} of engagement
+     * {@link Artifact}s will be updated in both the database and Git.
+     * 
+     * @param artifacts
+     * @param authorEmail
+     * @param authorName
+     */
+    public void process(List<Artifact> artifacts, Optional<String> authorEmail, Optional<String> authorName) {
 
-		return engagementUuid.isPresent() ? Artifact.countArtifactsByEngagementUuid(engagementUuid.get())
-				: Artifact.countAllArtifacts();
+        // split by engagement uuid and process each resulting artifact list
+        processArtifacts(artifacts).entrySet().parallelStream().forEach(e -> {
 
-	}
+            // modify artifacts in db
+            String changeLog = modifyArtifactsByEngagementUuid(e.getKey(), e.getValue());
+            // create commit message
+            String commitMessage = new StringBuilder("Changed Engagement Artifacts\n").append(changeLog).toString();
 
-	/**
-	 * Returns a {@link Map} of {@link List}s for each {@link Artifact} for each
-	 * unique Engagement ID.
-	 * 
-	 * @param artifacts
-	 * @return
-	 */
-	Map<String, List<Artifact>> processArtifacts(List<Artifact> artifacts) {
-		return artifacts.stream().map(a -> {
-			if (null == a.getUuid()) {
-				a.setUuid(UUID.randomUUID().toString());
-			}
-			return a;
-		}).collect(Collectors.groupingBy(Artifact::getEngagementUuid));
-	}
+            // pull latest artifacts from db
+            List<Artifact> latest = Artifact.findAllByEngagementUuid(e.getKey());
+            // send to git to update file
+            updateArtifactsFile(e.getKey(), latest, authorEmail, authorName, Optional.ofNullable(commitMessage));
 
-	String modifyArtifactsByEngagementUuid(String engagementUuid, List<Artifact> artifacts) {
+        });
 
-		StringBuilder changeLog = new StringBuilder();
+    }
 
-		// compare incoming with database
-		Diff diff = compareArtifactsWithDatabase(engagementUuid, artifacts);
+    /**
+     * Returns a {@link List} of {@link Artifact}s matching the specified
+     * {@link GetListOptions}.
+     * 
+     * @param options
+     * @return
+     */
+    public List<Artifact> getArtifacts(GetListOptions options) {
 
-		// group by object
-		List<ChangesByObject> l = diff.groupByObject();
+        Optional<String> engagementUuid = options.getEngagementUuid();
 
-		// create/update/delete artifacts in database
-		l.stream().filter(c -> c.getGlobalId().value().contains("Artifact")).forEach(cbo -> {
+        return engagementUuid.isPresent()
+                ? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
+                        options.getPageSize())
+                : Artifact.pagedArtifacts(options.getPage(), options.getPageSize());
 
-			// process the change
-			processObjectChange(cbo, artifacts);
+    }
 
-			changeLog.append(cbo.toString());
+    /**
+     * Returns a {@link ArtifactCount} with the count of {@link Artifact}s matching
+     * the specified {@link GetOptions}.
+     * 
+     * @param options
+     * @return
+     */
+    public ArtifactCount countArtifacts(GetOptions options) {
 
-		});
+        Optional<String> engagementUuid = options.getEngagementUuid();
 
-		return changeLog.toString();
+        return engagementUuid.isPresent() ? Artifact.countArtifactsByEngagementUuid(engagementUuid.get())
+                : Artifact.countAllArtifacts();
 
-	}
+    }
 
-	void processObjectChange(ChangesByObject cbo, List<Artifact> incoming) {
+    /**
+     * Returns a {@link Map} of {@link List}s for each {@link Artifact} for each
+     * unique Engagement ID.
+     * 
+     * @param artifacts
+     * @return
+     */
+    Map<String, List<Artifact>> processArtifacts(List<Artifact> artifacts) {
+        return artifacts.stream().map(a -> {
+            if (null == a.getUuid()) {
+                a.setUuid(UUID.randomUUID().toString());
+            }
+            return a;
+        }).collect(Collectors.groupingBy(Artifact::getEngagementUuid));
+    }
 
-		// get artifact uuid from global id
-		String globalId = cbo.getGlobalId().value();
-		String aUuid = globalId.substring(globalId.indexOf("/") + 1);
+    /**
+     * Modifies the given {@link List} of {@link Artifact}s for the given engagement
+     * UUID. Returns a {@link String} containing the change log summary.
+     * 
+     * @param engagementUuid
+     * @param artifacts
+     * @return
+     */
+    String modifyArtifactsByEngagementUuid(String engagementUuid, List<Artifact> artifacts) {
 
-		if (!cbo.getObjectsRemoved().isEmpty()) {
+        StringBuilder changeLog = new StringBuilder();
 
-			Artifact.deleteByUuid(aUuid);
+        // compare incoming with database
+        Diff diff = compareArtifactsWithDatabase(engagementUuid, artifacts);
 
-		} else {
+        // group by object
+        List<ChangesByObject> l = diff.groupByObject();
 
-			// find artifact in incoming list and create or update in database
-			incoming.stream().filter(a -> aUuid.equals(a.getUuid())).findAny().ifPresent(this::createOrUpdateArtifact);
+        // create/update/delete artifacts in database
+        l.stream().filter(c -> c.getGlobalId().value().contains("Artifact")).forEach(cbo -> {
 
-		}
+            // process the change
+            processObjectChange(cbo, artifacts);
 
-	}
+            changeLog.append(cbo.toString());
 
-	/**
-	 * Returns a {@link Diff} from comparing the provided {@link List} of
-	 * {@link Artifact}s with the current state in the database for the given
-	 * Engagement UUID.
-	 * 
-	 * @param engagementUuid
-	 * @param artifacts
-	 * @return
-	 */
-	Diff compareArtifactsWithDatabase(String engagementUuid, List<Artifact> artifacts) {
+        });
 
-		// get list from database by uuid
-		List<Artifact> existing = Artifact.findAllByEngagementUuid(engagementUuid);
+        return changeLog.toString();
 
-		// compare old and new lists
-		return JAVERS.compareCollections(existing, artifacts, Artifact.class);
+    }
 
-	}
+    /**
+     * Removes the {@link Artifact} from the database if the object has been
+     * removed. Otherwise, creates or updates the {@link Artifact}.
+     * 
+     * @param cbo
+     * @param incoming
+     */
+    void processObjectChange(ChangesByObject cbo, List<Artifact> incoming) {
 
-	/**
-	 * Creates or updates the {@link Artifact} in the database.
-	 * 
-	 * @param artifact
-	 * @return
-	 */
-	void createOrUpdateArtifact(Artifact artifact) {
+        // get artifact uuid from global id
+        String globalId = cbo.getGlobalId().value();
+        String aUuid = globalId.substring(globalId.indexOf("/") + 1);
 
-		Optional<Artifact> persisted = Artifact.findByUuid(artifact.getUuid());
-		if (persisted.isPresent()) {
-			updateArtifact(artifact, persisted.get());
-		} else {
-			createArtifact(artifact);
-		}
+        if (!cbo.getObjectsRemoved().isEmpty()) {
 
-	}
+            Artifact.deleteByUuid(aUuid);
 
-	/**
-	 * Sets any required attributes on the {@link Artifact} and inserts into the
-	 * database.
-	 * 
-	 * @param artifact
-	 */
-	void createArtifact(Artifact artifact) {
+        } else {
 
-		String now = getNowAsZulu();
+            // find artifact in incoming list and create or update in database
+            incoming.stream().filter(a -> aUuid.equals(a.getUuid())).findAny().ifPresent(this::createOrUpdateArtifact);
 
-		if (null == artifact.getUuid()) {
-			artifact.setUuid(UUID.randomUUID().toString());
-		}
-		artifact.setCreated(now);
-		artifact.setModified(now);
+        }
 
-		artifact.persist();
+    }
 
-	}
+    /**
+     * Returns a {@link Diff} from comparing the provided {@link List} of
+     * {@link Artifact}s with the current state in the database for the given
+     * Engagement UUID.
+     * 
+     * @param engagementUuid
+     * @param artifacts
+     * @return
+     */
+    Diff compareArtifactsWithDatabase(String engagementUuid, List<Artifact> artifacts) {
 
-	/**
-	 * Sets any required attributes on the {@link Artifact} and updates in the
-	 * database.
-	 * 
-	 * @param artifact
-	 */
-	void updateArtifact(Artifact artifact, Artifact existing) {
+        // get list from database by uuid
+        List<Artifact> existing = Artifact.findAllByEngagementUuid(engagementUuid);
 
-		artifact.setId(existing.getId());
-		artifact.setCreated(existing.getCreated());
-		artifact.setModified(getNowAsZulu());
+        // compare old and new lists
+        return JAVERS.compareCollections(existing, artifacts, Artifact.class);
 
-		artifact.update();
+    }
 
-	}
+    /**
+     * Creates or updates the {@link Artifact} in the database.
+     * 
+     * @param artifact
+     * @return
+     */
+    void createOrUpdateArtifact(Artifact artifact) {
 
-	/**
-	 * Returns a {@link String} representing the current Zulu time.
-	 * 
-	 * @return
-	 */
-	String getNowAsZulu() {
-		return LocalDateTime.now(ZoneId.of("Z")).toString();
-	}
+        Optional<Artifact> persisted = Artifact.findByUuid(artifact.getUuid());
+        if (persisted.isPresent()) {
+            updateArtifact(artifact, persisted.get());
+        } else {
+            createArtifact(artifact);
+        }
+
+    }
+
+    /**
+     * Sets any required attributes on the {@link Artifact} and inserts into the
+     * database.
+     * 
+     * @param artifact
+     */
+    void createArtifact(Artifact artifact) {
+
+        String now = getNowAsZulu();
+
+        if (null == artifact.getUuid()) {
+            artifact.setUuid(UUID.randomUUID().toString());
+        }
+        artifact.setCreated(now);
+        artifact.setModified(now);
+
+        artifact.persist();
+
+    }
+
+    /**
+     * Sets any required attributes on the {@link Artifact} and updates in the
+     * database.
+     * 
+     * @param artifact
+     */
+    void updateArtifact(Artifact artifact, Artifact existing) {
+
+        artifact.setId(existing.getId());
+        artifact.setCreated(existing.getCreated());
+        artifact.setModified(getNowAsZulu());
+
+        artifact.update();
+
+    }
+
+    /**
+     * Updates the artifacts file in GitLab with the given {@link List} of
+     * {@link Artifact}s.
+     * 
+     * @param engagementUuid
+     * @param artifacts
+     * @param authorEmail
+     * @param authorName
+     * @param commitMessage
+     */
+    void updateArtifactsFile(String engagementUuid, List<Artifact> artifacts, Optional<String> authorEmail,
+            Optional<String> authorName, Optional<String> commitMessage) {
+
+        // find project by engagement
+        Engagement project = engagementRestClient.getEngagementProjectByUuid(engagementUuid);
+
+        // create json content
+        String content = jsonb.toJson(artifacts);
+
+        // create
+        File file = createArtifactsFile(content, defaultBranch, authorName, authorEmail, commitMessage);
+
+        // create or udpate in git
+        gitlabRestClient.updateFile(project.getProjectId(), artifactsFile, file);
+
+    }
+
+    /**
+     * Creates and returns a {@link File} with the given parameters and encodes the
+     * content.
+     * 
+     * @param content
+     * @param branch
+     * @param authorName
+     * @param authorEmail
+     * @param commitMessage
+     * @return
+     */
+    File createArtifactsFile(String content, String branch, Optional<String> authorName, Optional<String> authorEmail,
+            Optional<String> commitMessage) {
+
+        // create file
+        File artifactFile = File.builder().filePath(artifactsFile).content(content)
+                .authorEmail(authorEmail.orElse(defaultAuthorEmail)).authorName(authorName.orElse(defaultAuthorName))
+                .branch(branch).commitMessage(commitMessage.orElse(defaultCommitMessage)).build();
+
+        // encode before sending
+        artifactFile.encodeFileAttributes();
+
+        return artifactFile;
+
+    }
+
+    /**
+     * Returns a {@link String} representing the current Zulu time.
+     * 
+     * @return
+     */
+    String getNowAsZulu() {
+        return LocalDateTime.now(ZoneId.of("Z")).toString();
+    }
 
 }

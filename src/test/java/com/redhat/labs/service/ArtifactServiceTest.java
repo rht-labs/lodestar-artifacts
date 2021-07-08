@@ -31,188 +31,157 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTestResource(ExternalApiWireMock.class)
 class ArtifactServiceTest {
 
-	@Inject
-	ArtifactService artifactService;
-	
-	@Inject
-	Jsonb jsonb;
+    @Inject
+    ArtifactService artifactService;
 
-	@BeforeEach
-	void setUp() {
-		artifactService.purge();
-		artifactService.refresh();
-	}
+    @Inject
+    Jsonb jsonb;
 
-	@Test
-	void testRefresh() {
+    @BeforeEach
+    void setUp() {
+        artifactService.purge();
+        artifactService.refresh();
+    }
 
-		// then
-		GetListOptions options = new GetListOptions();
-		options.setEngagementUuid("1111");
-		List<Artifact> artifacts = artifactService.getArtifacts(options);
-		assertNotNull(artifacts);
-		assertEquals(2, artifacts.size());
+    @Test
+    void testRefresh() {
 
-		options.setEngagementUuid("2222");
-		artifacts = artifactService.getArtifacts(options);
-		assertNotNull(artifacts);
-		assertEquals(2, artifacts.size());
+        // then
+        GetListOptions options = new GetListOptions();
+        options.setEngagementUuid("1111");
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
+        assertNotNull(artifacts);
+        assertEquals(2, artifacts.size());
 
-	}
+    }
 
-	@Test
-	void testModifyByEngagementIdUpdateInGit() {
+    @Test
+    void testModifyByEngagementIdUpdateInGit() {
 
-		// given
-		String engagementUuid = "1111";
+        // given
+        String engagementUuid = "1111";
 
-		// one new
-		Artifact newOne = Artifact.builder().engagementUuid(engagementUuid).description("a new artifact")
-				.linkAddress("http://a-new-one").title("New One").type("typeOne").build();
+        // one new
+        Artifact newOne = Artifact.builder().engagementUuid(engagementUuid).description("a new artifact")
+                .linkAddress("http://a-new-one").title("New One").type("typeOne").build();
 
-		// modify one
-		String json = ResourceLoader.load("project-1-artifacts.json");
-		List<Artifact> artifacts = jsonb.fromJson(json, new ArrayList<Artifact>() {
-			private static final long serialVersionUID = 1L;
-		}.getClass().getGenericSuperclass());
+        // modify one
+        String json = ResourceLoader.load("project-1-artifacts.json");
+        List<Artifact> artifacts = jsonb.fromJson(json, new ArrayList<Artifact>() {
+            private static final long serialVersionUID = 1L;
+        }.getClass().getGenericSuperclass());
 
-		Artifact modifyOne = artifacts.get(0);
-		modifyOne.setDescription("Updated");
+        Artifact modifyOne = artifacts.get(0);
+        modifyOne.setDescription("Updated");
 
-		// when
-		artifactService.process(Arrays.asList(newOne, modifyOne), Optional.empty(), Optional.empty());
+        // when
+        artifactService.process(Arrays.asList(newOne, modifyOne), Optional.empty(), Optional.empty());
 
-		// then
-		GetListOptions options = new GetListOptions();
-		options.setEngagementUuid(engagementUuid);
-		List<Artifact> updated = artifactService.getArtifacts(options);
+        // then
+        GetListOptions options = new GetListOptions();
+        options.setEngagementUuid(engagementUuid);
+        List<Artifact> updated = artifactService.getArtifacts(options);
 
-		assertNotNull(updated);
-		assertEquals(2, updated.size());
+        assertNotNull(updated);
+        assertEquals(2, updated.size());
 
-		updated.stream().forEach(a -> {
-			if (a.getType().equals("Demo")) {
-				assertEquals("Updated", a.getDescription());
-			} else if (a.getType().equals("typeOne")) {
-				assertNotNull(a.getUuid());
-			}
-		});
+        updated.stream().forEach(a -> {
+            if (a.getType().equals("Demo")) {
+                assertEquals("Updated", a.getDescription());
+            } else if (a.getType().equals("typeOne")) {
+                assertNotNull(a.getUuid());
+            }
+        });
 
-	}
+    }
 
-	@Test
-	void testModifyByEngagementIdCreateInGit() {
+    @Test
+    void testGetArtifactsNoOptions() {
 
-		// given
-		String engagementUuid = "2222";
+        // given
+        GetListOptions options = new GetListOptions();
 
-		// one new
-		Artifact newOne = Artifact.builder().engagementUuid(engagementUuid).description("a new artifact")
-				.linkAddress("http://a-new-one").title("New One").type("typeOne").build();
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
 
-		// when
-		artifactService.process(Arrays.asList(newOne), Optional.empty(), Optional.empty());
+        // then
+        assertNotNull(artifacts);
+        assertEquals(2, artifacts.size());
 
-		// then
-		GetListOptions options = new GetListOptions();
-		options.setEngagementUuid(engagementUuid);
-		List<Artifact> updated = artifactService.getArtifacts(options);
+    }
 
-		assertNotNull(updated);
-		assertEquals(1, updated.size());
-		assertNotNull(updated.get(0).getUuid());
-		assertEquals("typeOne", updated.get(0).getType());
+    @Test
+    void testGetArtifactsByEngagement() {
 
-	}
+        // given
+        GetListOptions options = new GetListOptions();
+        options.setEngagementUuid("1111");
 
-	@Test
-	void testGetArtifactsNoOptions() {
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
 
-		// given
-		GetListOptions options = new GetListOptions();
-		
-		// when
-		List<Artifact> artifacts = artifactService.getArtifacts(options);
-		
-		// then
-		assertNotNull(artifacts);
-		assertEquals(4, artifacts.size());
+        // then
+        assertNotNull(artifacts);
+        assertEquals(2, artifacts.size());
 
-	}
+    }
 
-	@Test
-	void testGetArtifactsByEngagement() {
+    @Test
+    void testGetArtifactsPaging() {
 
-		// given
-		GetListOptions options = new GetListOptions();
-		options.setEngagementUuid("1111");
-		
-		// when
-		List<Artifact> artifacts = artifactService.getArtifacts(options);
-		
-		// then
-		assertNotNull(artifacts);
-		assertEquals(2, artifacts.size());
+        // given
+        GetListOptions options = new GetListOptions();
+        options.setPage(0);
+        options.setPageSize(1);
 
-	}
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
 
-	@Test
-	void testGetArtifactsPaging() {
+        // then
+        assertNotNull(artifacts);
+        assertEquals(1, artifacts.size());
 
-		// given
-		GetListOptions options = new GetListOptions();
-		options.setPage(0);
-		options.setPageSize(3);
-		
-		// when
-		List<Artifact> artifacts = artifactService.getArtifacts(options);
-		
-		// then
-		assertNotNull(artifacts);
-		assertEquals(3, artifacts.size());
+        // given
+        options.setPage(1);
 
-		//given
-		options.setPage(1);
-		
-		// when
-		artifacts = artifactService.getArtifacts(options);
-		
-		// then
-		assertNotNull(artifacts);
-		assertEquals(1, artifacts.size());
-		
+        // when
+        artifacts = artifactService.getArtifacts(options);
 
-	}
+        // then
+        assertNotNull(artifacts);
+        assertEquals(1, artifacts.size());
 
-	@Test
-	void testCountArtifactsNoOptions() {
+    }
 
-		// given
-		GetOptions options = new GetOptions();
-		
-		// when
-		ArtifactCount count = artifactService.countArtifacts(options);
+    @Test
+    void testCountArtifactsNoOptions() {
 
-		// then
-		assertNotNull(count);
-		assertEquals(4, count.getCount());
+        // given
+        GetOptions options = new GetOptions();
 
-	}
+        // when
+        ArtifactCount count = artifactService.countArtifacts(options);
 
-	@Test
-	void testCountArtifactsByEngagement() {
+        // then
+        assertNotNull(count);
+        assertEquals(2, count.getCount());
 
-		// given
-		GetOptions options = new GetOptions("1111");
-		
-		// when
-		ArtifactCount count = artifactService.countArtifacts(options);
+    }
 
-		// then
-		// then
-		assertNotNull(count);
-		assertEquals(2, count.getCount());
+    @Test
+    void testCountArtifactsByEngagement() {
 
-	}
+        // given
+        GetOptions options = new GetOptions("1111");
+
+        // when
+        ArtifactCount count = artifactService.countArtifacts(options);
+
+        // then
+        // then
+        assertNotNull(count);
+        assertEquals(2, count.getCount());
+
+    }
 
 }

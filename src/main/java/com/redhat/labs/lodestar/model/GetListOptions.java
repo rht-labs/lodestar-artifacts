@@ -15,20 +15,20 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class GetListOptions extends GetOptions {
 
-	@Parameter(name = "page", required = false, description = "0 based index of page of results to return")
-	@QueryParam("page")
-	private int page;
+    @Parameter(name = "page", required = false, description = "0 based index of page of results to return")
+    @QueryParam("page")
+    private int page;
 
-	@Parameter(name = "pageSize", required = false, description = "number of results to return per page")
-	@QueryParam("pageSize")
-	private int pageSize;
+    @Parameter(name = "pageSize", required = false, description = "number of results to return per page")
+    @QueryParam("pageSize")
+    private int pageSize;
 
-	public int getPage() {
-		return page < 0 ? 0 : page;
-	}
+    public int getPage() {
+        return page < 0 ? 0 : page;
+    }
 
-	public int getPageSize() {
-		return pageSize < 1 ? 20 : pageSize;
-	}
+    public int getPageSize() {
+        return pageSize < 1 ? 20 : pageSize;
+    }
 
 }

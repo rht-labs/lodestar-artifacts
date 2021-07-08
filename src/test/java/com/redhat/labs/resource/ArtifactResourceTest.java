@@ -47,7 +47,7 @@ class ArtifactResourceTest {
 	@Test
 	void testCountArtifactsAll() {
 
-		given().when().get("/api/artifacts/count").then().statusCode(200).body("count", equalTo(4));
+		given().when().get("/api/artifacts/count").then().statusCode(200).body("count", equalTo(2));
 
 	}
 
@@ -63,7 +63,7 @@ class ArtifactResourceTest {
 	void testGetArtifactsAll() {
 
 		JsonPath path = given().when().get("/api/artifacts").then().statusCode(200).extract().jsonPath();
-		assertEquals(4, path.getList(".").size());
+		assertEquals(2, path.getList(".").size());
 
 	}
 
@@ -71,17 +71,17 @@ class ArtifactResourceTest {
 	void testGetArtifactsAllPaged() {
 
 		// first page
-		JsonPath path = given().queryParam("page", 0).queryParam("pageSize", 3).when().get("/api/artifacts").then()
+		JsonPath path = given().queryParam("page", 0).queryParam("pageSize", 1).when().get("/api/artifacts").then()
 				.statusCode(200).extract().jsonPath();
-		assertEquals(3, path.getList(".").size());
+		assertEquals(1, path.getList(".").size());
 
 		// last page
-		path = given().queryParam("page", 1).queryParam("pageSize", 3).when().get("/api/artifacts").then()
+		path = given().queryParam("page", 1).queryParam("pageSize", 1).when().get("/api/artifacts").then()
 				.statusCode(200).extract().jsonPath();
 		assertEquals(1, path.getList(".").size());
 
 		// page with no results
-		path = given().queryParam("page", 2).queryParam("pageSize", 3).when().get("/api/artifacts").then()
+		path = given().queryParam("page", 2).queryParam("pageSize", 1).when().get("/api/artifacts").then()
 				.statusCode(200).extract().jsonPath();
 		assertEquals(0, path.getList(".").size());
 
@@ -112,7 +112,7 @@ class ArtifactResourceTest {
 		a.setTitle(null);
 		String requestBody = jsonb.toJson(Arrays.asList(a));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(400);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
 	}
 
@@ -123,7 +123,7 @@ class ArtifactResourceTest {
 		a.setDescription(null);
 		String requestBody = jsonb.toJson(Arrays.asList(a));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(400);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
 	}
 
@@ -134,7 +134,7 @@ class ArtifactResourceTest {
 		a.setType(null);
 		String requestBody = jsonb.toJson(Arrays.asList(a));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(400);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
 	}
 
@@ -145,7 +145,7 @@ class ArtifactResourceTest {
 		a.setLinkAddress(null);
 		String requestBody = jsonb.toJson(Arrays.asList(a));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(400);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
 	}
 
@@ -155,7 +155,7 @@ class ArtifactResourceTest {
 		Artifact a = mockArtifact(null);
 		String requestBody = jsonb.toJson(Arrays.asList(a));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(400);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
 	}
 
@@ -177,7 +177,7 @@ class ArtifactResourceTest {
 
 		String requestBody = jsonb.toJson(Arrays.asList(a1, a2, modified));
 
-		given().contentType(ContentType.JSON).body(requestBody).post("/api/artifacts").then().statusCode(200);
+		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(200);
 
 		JsonPath path = given().queryParam("engagementUuid", "1111").when().get("/api/artifacts").then().statusCode(200).extract().jsonPath();
 
