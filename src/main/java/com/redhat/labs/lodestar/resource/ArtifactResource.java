@@ -39,7 +39,7 @@ public class ArtifactResource {
     @APIResponses(value = {
             @APIResponse(responseCode = "200", description = "The list of artifacts  has been processed."),
             @APIResponse(responseCode = "400", description = "Invalid list of artifacts provided.") })
-    @Operation(summary = "Artifacs have been processed in persisted.")
+    @Operation(summary = "Artifacts have been processed and persisted.")
     public Response processArtifacts(@Valid List<Artifact> artifacts,
             @QueryParam("authorEmail") Optional<String> authorEmail,
             @QueryParam("authorName") Optional<String> authorName) {
