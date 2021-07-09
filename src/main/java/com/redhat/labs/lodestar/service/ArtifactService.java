@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
+import javax.ws.rs.WebApplicationException;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -22,6 +24,8 @@ import org.javers.core.Javers;
 import org.javers.core.JaversBuilder;
 import org.javers.core.diff.Diff;
 import org.javers.core.diff.ListCompareAlgorithm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.redhat.labs.lodestar.model.Artifact;
 import com.redhat.labs.lodestar.model.ArtifactCount;
@@ -34,6 +38,7 @@ import com.redhat.labs.lodestar.rest.client.GitlabRestClient;
 
 @ApplicationScoped
 public class ArtifactService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ArtifactService.class);
 
     @ConfigProperty(name = "artifacts.file", defaultValue = "artifacts.json")
     private String artifactsFile;
@@ -78,7 +83,7 @@ public class ArtifactService {
     public void refresh() {
 
         engagementRestClient.getAllEngagementProjects().stream().map(Engagement::getProjectId)
-                .map(this::getArtifactsFileByProjectId).map(this::parseArtifactsFile).flatMap(Collection::stream)
+                .map(this::getArtifactsFromGitlabByProjectId).flatMap(Collection::stream)
                 .forEach(a -> {
 
                     // set uuid if missing
@@ -94,33 +99,30 @@ public class ArtifactService {
     }
 
     /**
-     * Returns a {@link File} containing the artifacts content. Otherwise, null is
-     * returned.
-     * 
-     * @param projectId
-     * @return
-     */
-    File getArtifactsFileByProjectId(long projectId) {
-        return gitlabRestClient.getFile(projectId, artifactsFile, defaultBranch);
-    }
-
-    /**
      * Returns a {@link List} of {@link Artifact}s for the given {@link File}. An
      * empty {@link List} is returned if {@link File} or its contents are null or
      * blank.
      * 
-     * @param file
+     * @param projectId
      * @return
      */
-    List<Artifact> parseArtifactsFile(File file) {
-
-        if (null == file || null == file.getContent() || file.getContent().isBlank()) {
-            return new ArrayList<>();
+    List<Artifact> getArtifactsFromGitlabByProjectId(long projectId) {
+        try {
+            File file = gitlabRestClient.getFile(projectId, artifactsFile, defaultBranch);
+            if(null == file.getContent() || file.getContent().isBlank()) {
+                LOGGER.error("NO FILE DATA FROM GITLAB FOR PROJECT {}. THIS SHALL NOT STAND", projectId);
+                return Collections.emptyList();
+            }
+            
+            file.decodeFileAttributes();
+            return Arrays.asList(jsonb.fromJson(file.getContent(), Artifact[].class));
+            
+        } catch(WebApplicationException wae) {
+            if(wae.getResponse().getStatus() != 404) {
+                throw wae;
+            }
+            return Collections.emptyList();
         }
-
-        file.decodeFileAttributes();
-        return Arrays.asList(jsonb.fromJson(file.getContent(), Artifact[].class));
-
     }
 
     /**
@@ -353,7 +355,7 @@ public class ArtifactService {
         // create
         File file = createArtifactsFile(content, defaultBranch, authorName, authorEmail, commitMessage);
 
-        // create or udpate in git
+        // update in git
         gitlabRestClient.updateFile(project.getProjectId(), artifactsFile, file);
 
     }

@@ -22,7 +22,7 @@ db:
 
 api:
   gitlab: http://gitlab.com
-  engagement: http://git-api:8080
+  engagement: http://lodestar-git-api:8080
 
 tokens:
   gitlab: nope

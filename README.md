@@ -21,9 +21,9 @@ The following environment variables are available:
 | MONGODB_DATABASE | artifacts | The database name |
 
 | GITLAB_API_URL | https://acmegit.com | The url to Gitlab |
+| ENGAGEMENT_API_URL | https://acmegit.com | The url to Gitlab |
 | GITLAB_TOKEN | t | The Access Token for Gitlab |
 
-| GROUP_PARENT_ID | 1234 | Gitlab group ID containing engagements |
 | DEFAULT_BRANCH | master | Default branch to use if default not found for project |
 | DEFAULT_COMMIT_MESSAGE | updated artifacts list | Default commit message used if diff fails |
 | DEFAULT_PAGE_SIZE | 20 | Default number of artifacts that will be returned if pageSize not specified |
@@ -49,8 +49,8 @@ You can run your application in dev mode that enables live coding using:
 
 ```
 export GITLAB_API_URL=https://gitlab.com/ 
+export ENGAGEMENT_API_URL=http://git-api:8080
 export GITLAB_TOKEN=token
-export GROUP_PARENT_ID=<your-group-id>
 mvn quarkus:dev
 ```
 
