@@ -31,6 +31,7 @@ public class Artifact extends PanacheMongoEntityBase {
     private static final String ENGAGEMENT_UUID = "engagementUuid";
     private static final String MODIFIED = "modified";
     private static final String UUID = "uuid";
+    private static final String TYPE = "type";
 
     @BsonId
     @DiffIgnore
@@ -75,6 +76,17 @@ public class Artifact extends PanacheMongoEntityBase {
     public static ArtifactCount countArtifactsByEngagementUuid(String engagementUuid) {
         return ArtifactCount.builder().count(count(ENGAGEMENT_UUID, engagementUuid)).build();
     }
+    
+    /**
+     * Returns an {@link ArtifactCount} containing the count for the number of
+     * {@link Artifact} matching the type.
+     * 
+     * @param engagementUuid
+     * @return
+     */
+    public static ArtifactCount countArtifactsByType(String type) {
+        return ArtifactCount.builder().count(count(TYPE, type)).build();
+    }
 
     /**
      * Returns {@link List} of {@link Artifact}s sorted descending on modified
@@ -86,6 +98,18 @@ public class Artifact extends PanacheMongoEntityBase {
      */
     public static List<Artifact> pagedArtifacts(int page, int pageSize) {
         return findAll(Sort.descending(MODIFIED)).page(page, pageSize).list();
+    }
+    
+    /**
+     * Returns {@link List} of {@link Artifact}s sorted descending on modified
+     * timestamp using the page specified where type is specified.
+     * 
+     * @param page
+     * @param pageSize
+     * @return
+     */
+    public static List<Artifact> pagedArtifactsByType(String type, int page, int pageSize) {
+        return find(TYPE, Sort.descending(MODIFIED), type).page(page, pageSize).list();
     }
 
     /**

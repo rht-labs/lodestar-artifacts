@@ -57,7 +57,7 @@ public class ArtifactResource {
 
         List<Artifact> artifacts = service.getArtifacts(options);
         ArtifactCount count = service.countArtifacts(options);
-
+        
         return Response.ok(artifacts).header("x-page", options.getPage()).header("x-per-page", options.getPageSize())
                 .header("x-total-artifacts", count.getCount())
                 .header("x-total-pages", (count.getCount() / options.getPageSize()) + 1).build();

@@ -53,7 +53,7 @@ class ArtifactResourceTest {
 
 	@Test
 	void testCountArtifactsByEngagement() {
-
+	    System.out.println(service.getArtifacts(new GetListOptions()));
 		given().queryParam("engagementUuid", "1111").when().get("/api/artifacts/count").then().statusCode(200)
 				.body("count", equalTo(2));
 

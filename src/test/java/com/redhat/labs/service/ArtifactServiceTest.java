@@ -172,7 +172,7 @@ class ArtifactServiceTest {
     void testCountArtifactsByEngagement() {
 
         // given
-        GetOptions options = new GetOptions("1111");
+        GetOptions options = new GetOptions("1111", null);
 
         // when
         ArtifactCount count = artifactService.countArtifacts(options);
