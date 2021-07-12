@@ -80,21 +80,7 @@ public class ArtifactService {
      * and inserts into the database.
      */
     public void refresh() {
-
-        engagementRestClient.getAllEngagementProjects().stream().map(Engagement::getProjectId)
-                .map(this::getArtifactsFromGitlabByProjectId).flatMap(Collection::stream)
-                .forEach(a -> {
-
-                    // set uuid if missing
-                    if (null == a.getUuid()) {
-                        a.setUuid(UUID.randomUUID().toString());
-                    }
-
-                    // persist the artifact
-                    createOrUpdateArtifact(a);
-
-                });
-
+        engagementRestClient.getAllEngagementProjects().parallelStream().forEach(this::reloadFromGitlabByEngagement);
     }
 
     /**
@@ -105,22 +91,38 @@ public class ArtifactService {
      * @param projectId
      * @return
      */
-    List<Artifact> getArtifactsFromGitlabByProjectId(long projectId) {
+    void reloadFromGitlabByEngagement(Engagement engagement) {
+        if(engagement.getUuid() == null) {
+            LOGGER.error("Engagement found with no uuid. Check description of project {}", engagement.getProjectId());
+            return;
+        }
+        
         try {
-            File file = gitlabRestClient.getFile(projectId, artifactsFile, defaultBranch);
+            File file = gitlabRestClient.getFile(engagement.getProjectId(), artifactsFile, defaultBranch);
             if(null == file.getContent() || file.getContent().isBlank()) {
-                LOGGER.error("NO FILE DATA FROM GITLAB FOR PROJECT {}. THIS SHALL NOT STAND", projectId);
-                return Collections.emptyList();
+                LOGGER.error("IMPOSSIBLE. NO FILE DATA FROM GITLAB FOR PROJECT {}. THIS SHALL NOT STAND", engagement.getProjectId());
+                return;
             }
             
             file.decodeFileAttributes();
-            return Arrays.asList(jsonb.fromJson(file.getContent(), Artifact[].class));
+            List<Artifact> artifacts = Arrays.asList(jsonb.fromJson(file.getContent(), Artifact[].class));
+            
+            artifacts.forEach(a -> {
+                a.setEngagementUuid(engagement.getUuid());
+             // set uuid if missing
+                if (null == a.getUuid()) {
+                    a.setUuid(UUID.randomUUID().toString());
+                }
+                
+             // persist the artifact
+                createOrUpdateArtifact(a);
+            });
             
         } catch(WebApplicationException wae) {
             if(wae.getResponse().getStatus() != 404) {
                 throw wae;
             }
-            return Collections.emptyList();
+            LOGGER.error("NO FILE DATA FROM GITLAB FOR PROJECT {}. THIS SHALL NOT STAND", engagement.getProjectId());
         }
     }
 
