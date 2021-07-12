@@ -2,7 +2,6 @@ package com.redhat.labs.lodestar.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -161,6 +160,10 @@ public class ArtifactService {
      * @return
      */
     public List<Artifact> getArtifacts(GetListOptions options) {
+        
+        if(options.getType().isPresent()) {
+            return getArtifactsByType(options);
+        }
 
         Optional<String> engagementUuid = options.getEngagementUuid();
 
@@ -168,6 +171,16 @@ public class ArtifactService {
                 ? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
                         options.getPageSize())
                 : Artifact.pagedArtifacts(options.getPage(), options.getPageSize());
+
+    }
+    
+    public List<Artifact> getArtifactsByType(GetListOptions options) {
+
+        if(options.getEngagementUuid().isPresent()) {
+            throw new WebApplicationException("Type and engagement together is not supported", 400);
+        }
+
+        return Artifact.pagedArtifactsByType(options.getType().get(), options.getPage(), options.getPageSize());
 
     }
 
@@ -182,8 +195,17 @@ public class ArtifactService {
 
         Optional<String> engagementUuid = options.getEngagementUuid();
 
-        return engagementUuid.isPresent() ? Artifact.countArtifactsByEngagementUuid(engagementUuid.get())
-                : Artifact.countAllArtifacts();
+        ArtifactCount count;
+
+        if(options.getType().isPresent()) {
+            count = Artifact.countArtifactsByType(options.getType().get());
+        } else if(engagementUuid.isPresent()) {
+            count = Artifact.countArtifactsByEngagementUuid(engagementUuid.get());
+        } else {
+            count = Artifact.countAllArtifacts();
+        }
+
+        return count;
 
     }
 
