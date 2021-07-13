@@ -31,12 +31,12 @@ public class ExternalApiWireMock implements QuarkusTestResourceLifecycleManager 
 
         body = ResourceLoader.load("engagement-project-1.json");
 
-        stubFor(get(urlEqualTo("/api/v1/engagements/projects/1111"))
+        stubFor(get(urlEqualTo("/api/v1/engagements/projects/1111?mini=true"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
 
         body = ResourceLoader.load("engagement-project-2.json");
 
-        stubFor(get(urlEqualTo("/api/v1/engagements/projects/2222"))
+        stubFor(get(urlEqualTo("/api/v1/engagements/projects/2222?mini=true"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
 
 //        stubFor(get(urlEqualTo("/api/v1/engagements/projects/2222"))
@@ -49,7 +49,12 @@ public class ExternalApiWireMock implements QuarkusTestResourceLifecycleManager 
         stubFor(get(urlEqualTo("/api/v4/projects/1/repository/files/artifacts.json?ref=master"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
 
-        stubFor(get(urlEqualTo("/api/v4/projects/2/repository/files/artifacts.json?ref=master"))
+        body = ResourceLoader.load("project-91-artifacts-file.json");
+        
+        stubFor(get(urlEqualTo("/api/v4/projects/91/repository/files/artifacts.json?ref=master"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
+        
+        stubFor(get(urlEqualTo("/api/v4/projects/92/repository/files/artifacts.json?ref=master"))
                 .willReturn(aResponse().withStatus(404)));
 
         // update existing artifacts.json
