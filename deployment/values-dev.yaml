@@ -14,10 +14,10 @@ git:
   ref: master
 
 db:
-  mongodbServiceName: lodestar-backend-mongodb
+  mongodbServiceName: lodestar-artifacts-mongodb
   mongodbUser: mongouser
   mongodbPassword: mongopassword
-  mongodbDatabase: engagements
+  mongodbDatabase: artifacts
   mongodbAdminPassword: mongoadminpassword
 
 api:

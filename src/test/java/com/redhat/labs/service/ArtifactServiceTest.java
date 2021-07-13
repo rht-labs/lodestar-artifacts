@@ -2,6 +2,7 @@ package com.redhat.labs.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,6 +11,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.json.bind.Jsonb;
+import javax.ws.rs.WebApplicationException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -125,6 +127,38 @@ class ArtifactServiceTest {
         assertEquals(2, artifacts.size());
 
     }
+    
+    @Test
+    void testGetArtifactsByType() {
+
+        // given
+        GetListOptions options = new GetListOptions();
+        options.setType("Demo");
+
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
+
+        // then
+        assertNotNull(artifacts);
+        assertEquals(1, artifacts.size());
+
+    }
+    
+    @Test
+    void testGetArtifactsByTypeException() {
+
+        // given
+        GetListOptions options = new GetListOptions();
+        options.setType("Demo");
+        options.setEngagementUuid("1111");
+        
+        WebApplicationException ex = assertThrows(WebApplicationException.class, () -> {
+            artifactService.getArtifacts(options);
+        });
+
+        assertEquals(400, ex.getResponse().getStatus());
+
+    }
 
     @Test
     void testGetArtifactsPaging() {
@@ -167,12 +201,27 @@ class ArtifactServiceTest {
         assertEquals(2, count.getCount());
 
     }
+    
+    @Test
+    void testCountArtifactsByType() {
+
+        // given
+        GetOptions options = new GetOptions(null, "Demo");
+
+        // when
+        ArtifactCount count = artifactService.countArtifacts(options);
+
+        // then
+        assertNotNull(count);
+        assertEquals(1, count.getCount());
+
+    }
 
     @Test
     void testCountArtifactsByEngagement() {
 
         // given
-        GetOptions options = new GetOptions("1111");
+        GetOptions options = new GetOptions("1111", null);
 
         // when
         ArtifactCount count = artifactService.countArtifacts(options);
