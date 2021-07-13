@@ -50,6 +50,13 @@ class ArtifactResourceTest {
 		given().when().get("/api/artifacts/count").then().statusCode(200).body("count", equalTo(2));
 
 	}
+	
+	@Test
+	void testRefresh() {
+	    given().when().put("/api/artifacts/refresh").then().statusCode(202);
+	    
+	    assertEquals(2, service.getArtifacts(new GetListOptions()).size());
+	}
 
 	@Test
 	void testCountArtifactsByEngagement() {
@@ -157,6 +164,41 @@ class ArtifactResourceTest {
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts").then().statusCode(400);
 
+	}
+	
+	@Test
+    void testModifyArtifactsByEngagementUuid() {
+	    
+	 // get existing artifact
+        GetListOptions options = new GetListOptions();
+        options.setEngagementUuid("1111");
+        List<Artifact> artifacts = service.getArtifacts(options);
+        assertNotNull(artifacts);
+        assertFalse(artifacts.isEmpty());
+        Artifact modified = artifacts.get(0);
+        modified.setDescription("UPDATED");
+
+        // new artifacts
+        Artifact a1 = mockArtifact("1111");
+        Artifact a2 = mockArtifact("2222");
+
+        String requestBody = jsonb.toJson(Arrays.asList(a1, a2, modified));
+
+        given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111").then().statusCode(200);
+        
+        JsonPath path = given().queryParam("engagementUuid", "1111").when().get("/api/artifacts").then().statusCode(200).extract().jsonPath();
+        
+        assertEquals(2, path.getList(".").size());
+
+        String a0Type = path.getString("[0].type");
+        String a0Desc = path.getString("[0].description");
+
+        String a1Type = path.getString("[1].type");
+        String a1Desc = path.getString("[1].description");
+
+        boolean newTypeFound = "newType".equals(a0Type) || "newType".equals(a1Type);
+        boolean descFound = "UPDATED".equals(a0Desc) || "UPDATED".equals(a1Desc);
+        assertTrue(newTypeFound && descFound);
 	}
 
 	@Test

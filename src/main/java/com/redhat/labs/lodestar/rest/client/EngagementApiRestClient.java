@@ -6,6 +6,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
@@ -19,7 +20,7 @@ public interface EngagementApiRestClient {
 
     @GET
     @Path("/api/v1/engagements/projects/{uuid}")
-    Engagement getEngagementProjectByUuid(@PathParam("uuid") String engagementUuid);
+    Engagement getEngagementProjectByUuid(@PathParam("uuid") String engagementUuid, @QueryParam("mini") boolean mini);
 
     @GET
     @Path("/api/v1/engagements/projects")

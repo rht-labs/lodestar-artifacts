@@ -10,6 +10,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -35,6 +36,7 @@ public class ArtifactResource {
     @Inject
     ArtifactService service;
 
+    //may need to remove this and only accept by engagement uuid
     @PUT
     @APIResponses(value = {
             @APIResponse(responseCode = "200", description = "The list of artifacts  has been processed."),
@@ -45,6 +47,21 @@ public class ArtifactResource {
             @QueryParam("authorName") Optional<String> authorName) {
 
         service.process(artifacts, authorEmail, authorName);
+        return Response.ok().build();
+
+    }
+    
+    @PUT
+    @APIResponses(value = {
+            @APIResponse(responseCode = "200", description = "The list of artifacts  has been processed."),
+            @APIResponse(responseCode = "400", description = "Invalid list of artifacts provided.") })
+    @Operation(summary = "Artifacts have been processed and persisted for engagement.")
+    @Path("/engagement/uuid/{engagementUuid}")
+    public Response processEngagementArtifacts(List<Artifact> artifacts, @PathParam(value="engagementUuid") String engagementUuid,
+            @QueryParam("authorEmail") Optional<String> authorEmail,
+            @QueryParam("authorName") Optional<String> authorName) {
+
+        service.updateArtifacts(engagementUuid, artifacts, authorEmail, authorName);
         return Response.ok().build();
 
     }

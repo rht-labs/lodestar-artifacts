@@ -151,6 +151,17 @@ public class ArtifactService {
         });
 
     }
+    
+    public void updateArtifacts(String engagementUuid, List<Artifact> artifacts, Optional<String> authorEmail, Optional<String> authorName) {
+        
+        for(Artifact artifact : artifacts) {
+            if(artifact.getEngagementUuid() == null) {
+                artifact.setEngagementUuid(engagementUuid);
+            }
+        }
+        
+        process(artifacts, authorEmail, authorName);
+    }
 
     /**
      * Returns a {@link List} of {@link Artifact}s matching the specified
@@ -217,6 +228,7 @@ public class ArtifactService {
      * @return
      */
     Map<String, List<Artifact>> processArtifacts(List<Artifact> artifacts) {
+
         return artifacts.stream().map(a -> {
             if (null == a.getUuid()) {
                 a.setUuid(UUID.randomUUID().toString());
@@ -369,7 +381,7 @@ public class ArtifactService {
             Optional<String> authorName, Optional<String> commitMessage) {
 
         // find project by engagement
-        Engagement project = engagementRestClient.getEngagementProjectByUuid(engagementUuid);
+        Engagement project = engagementRestClient.getEngagementProjectByUuid(engagementUuid, true);
 
         // create json content
         String content = jsonb.toJson(artifacts);
