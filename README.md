@@ -36,7 +36,7 @@ See the deployment [readme](./deployment) for information on deploying to a Open
 
 ### MongoDB 
 
-A MongoDB database is needed for development. To spin up a docker MongoDB container run the following
+A MongoDB database is needed for development and is automatically added by Quarkus Devservices. To use a different instance, run in prod mode and point to the mongo instance via properties. To create a docker instance, run the following
 
 ```
 cd deployment
