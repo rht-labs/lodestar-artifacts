@@ -20,7 +20,6 @@ import com.redhat.labs.lodestar.model.Artifact;
 import com.redhat.labs.lodestar.model.GetListOptions;
 import com.redhat.labs.lodestar.service.ArtifactService;
 import com.redhat.labs.mock.ExternalApiWireMock;
-import com.redhat.labs.mongo.MongoTestResource;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -28,7 +27,6 @@ import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 
 @QuarkusTest
-@QuarkusTestResource(MongoTestResource.class)
 @QuarkusTestResource(ExternalApiWireMock.class)
 class ArtifactResourceTest {
 
