@@ -3,6 +3,7 @@ package com.redhat.labs.lodestar.model;
 import java.util.List;
 import java.util.Optional;
 
+import javax.json.bind.annotation.JsonbProperty;
 import javax.json.bind.annotation.JsonbTransient;
 import javax.validation.constraints.NotBlank;
 
@@ -42,6 +43,7 @@ public class Artifact extends PanacheMongoEntityBase {
     @DiffIgnore
     private String created;
     @DiffIgnore
+    @JsonbProperty(value = "last_modified")
     private String modified;
 
     @NotBlank

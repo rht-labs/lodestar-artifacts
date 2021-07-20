@@ -140,14 +140,16 @@ public class ArtifactService {
 
             // modify artifacts in db
             String changeLog = modifyArtifactsByEngagementUuid(e.getKey(), e.getValue());
-            // create commit message
-            String commitMessage = new StringBuilder("Changed Engagement Artifacts\n").append(changeLog).toString();
-
-            // pull latest artifacts from db
-            List<Artifact> latest = Artifact.findAllByEngagementUuid(e.getKey());
-            // send to git to update file
-            updateArtifactsFile(e.getKey(), latest, authorEmail, authorName, Optional.ofNullable(commitMessage));
-
+            
+            if(changeLog.length() > 0) { //Empty string == no changes
+                // create commit message
+                String commitMessage = new StringBuilder(defaultCommitMessage).append(changeLog).toString();
+    
+                // pull latest artifacts from db
+                List<Artifact> latest = Artifact.findAllByEngagementUuid(e.getKey());
+                // send to git to update file
+                updateArtifactsFile(e.getKey(), latest, authorEmail, authorName, Optional.ofNullable(commitMessage));
+            }
         });
 
     }
