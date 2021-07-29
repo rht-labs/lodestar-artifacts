@@ -46,23 +46,23 @@ public class ExternalApiWireMock implements QuarkusTestResourceLifecycleManager 
 
         body = ResourceLoader.load("project-1-artifacts-file.json");
 
-        stubFor(get(urlEqualTo("/api/v4/projects/1/repository/files/artifacts.json?ref=master"))
+        stubFor(get(urlEqualTo("/api/v4/projects/1/repository/files/engagement%2Fartifacts.json?ref=master"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
 
         body = ResourceLoader.load("project-91-artifacts-file.json");
         
-        stubFor(get(urlEqualTo("/api/v4/projects/91/repository/files/artifacts.json?ref=master"))
+        stubFor(get(urlEqualTo("/api/v4/projects/91/repository/files/engagement%2Fartifacts.json?ref=master"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody(body)));
         
-        stubFor(get(urlEqualTo("/api/v4/projects/92/repository/files/artifacts.json?ref=master"))
+        stubFor(get(urlEqualTo("/api/v4/projects/92/repository/files/engagement%2Fartifacts.json?ref=master"))
                 .willReturn(aResponse().withStatus(404)));
 
         // update existing artifacts.json
 
-        stubFor(put(urlEqualTo("/api/v4/projects/1/repository/files/artifacts.json"))
+        stubFor(put(urlEqualTo("/api/v4/projects/1/repository/files/engagement%2Fartifacts.json"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withStatus(200)));
 
-        stubFor(put(urlEqualTo("/api/v4/projects/2/repository/files/artifacts.json"))
+        stubFor(put(urlEqualTo("/api/v4/projects/2/repository/files/engagement%2Fartifacts.json"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withStatus(200)));
 
         // set endpoint

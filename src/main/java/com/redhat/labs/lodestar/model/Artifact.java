@@ -29,9 +29,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 public class Artifact extends PanacheMongoEntityBase {
 
-    private static final String ENGAGEMENT_UUID = "engagementUuid";
     private static final String MODIFIED = "modified";
-    private static final String UUID = "uuid";
 
     @BsonId
     @DiffIgnore
@@ -43,10 +41,9 @@ public class Artifact extends PanacheMongoEntityBase {
     @DiffIgnore
     private String created;
     @DiffIgnore
-    @JsonbProperty(value = "last_modified")
+    @JsonbProperty(value = "updated")
     private String modified;
 
-    @NotBlank
     private String engagementUuid;
     @NotBlank
     private String title;
@@ -56,6 +53,8 @@ public class Artifact extends PanacheMongoEntityBase {
     private String type;
     @NotBlank
     private String linkAddress;
+    
+    private String region;
 
     /**
      * Returns an {@link ArtifactCount} containing the count for the total number of
@@ -75,7 +74,7 @@ public class Artifact extends PanacheMongoEntityBase {
      * @return
      */
     public static ArtifactCount countArtifactsByEngagementUuid(String engagementUuid) {
-        return ArtifactCount.builder().count(count(ENGAGEMENT_UUID, engagementUuid)).build();
+        return ArtifactCount.builder().count(count("engagementUuid", engagementUuid)).build();
     }
     
     /**
@@ -87,6 +86,14 @@ public class Artifact extends PanacheMongoEntityBase {
      */
     public static ArtifactCount countArtifactsByType(String type) {
         return ArtifactCount.builder().count(count("type", type)).build();
+    }
+    
+    public static ArtifactCount countArtifactsByRegion(List<String> regions) {
+        return ArtifactCount.builder().count(count("region in ?1", regions)).build();
+    }
+    
+    public static ArtifactCount countArtifactsByRegionAndType(String type, List<String> regions) {
+        return ArtifactCount.builder().count(count("{ $and: [ {'type':?1}, {'region':{'$in':[?2]}} ] }", type, regions)).build();
     }
 
     /**
@@ -112,6 +119,16 @@ public class Artifact extends PanacheMongoEntityBase {
     public static List<Artifact> pagedArtifactsByType(String type, int page, int pageSize) {
         return find("type", Sort.descending(MODIFIED), type).page(page, pageSize).list();
     }
+    
+    public static List<Artifact> pagedArtifactsByRegion(List<String> regions, int page, int pageSize) {
+        return find("region in ?1", Sort.descending(MODIFIED), regions).page(page, pageSize).list();
+    }
+    
+    public static List<Artifact> pagedArtifactsByRegionAndType(String type, List<String> regions, int page, int pageSize) {
+        //not sure why the commented query doesn't work but keep seeing this error - no viable alternative at input 'type='
+        //return find("type = ?1 and region in ?2", Sort.descending(MODIFIED), type, regions).page(page, pageSize).list();
+        return find("{ $and: [ {'type':?1}, {'region':{'$in':[?2]}} ] }", Sort.descending(MODIFIED), type, regions).page(page, pageSize).list();
+    }
 
     /**
      * Returns a {@link List} of {@link Artifact}s for the given engagement uuid,
@@ -123,7 +140,7 @@ public class Artifact extends PanacheMongoEntityBase {
      * @return
      */
     public static List<Artifact> pagedArtifactsByEngagementUuid(String engagementUuid, int page, int pageSize) {
-        return find(ENGAGEMENT_UUID, Sort.descending(MODIFIED), engagementUuid).page(page, pageSize).list();
+        return find("engagementUuid", Sort.descending(MODIFIED), engagementUuid).page(page, pageSize).list();
     }
 
     /**
@@ -134,7 +151,7 @@ public class Artifact extends PanacheMongoEntityBase {
      * @return
      */
     public static List<Artifact> findAllByEngagementUuid(String engagementUuid) {
-        return list(ENGAGEMENT_UUID, engagementUuid);
+        return list("engagementUuid", engagementUuid);
     }
 
     /**
@@ -145,7 +162,7 @@ public class Artifact extends PanacheMongoEntityBase {
      * @return
      */
     public static Optional<Artifact> findByUuid(String uuid) {
-        return find(UUID, uuid).singleResultOptional();
+        return find("uuid", uuid).singleResultOptional();
     }
 
     /**
@@ -155,7 +172,7 @@ public class Artifact extends PanacheMongoEntityBase {
      * @return
      */
     public static long deleteByUuid(String uuid) {
-        return Artifact.delete(UUID, uuid);
+        return Artifact.delete("uuid", uuid);
     }
 
     /**

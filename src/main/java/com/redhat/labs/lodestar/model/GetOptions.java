@@ -1,5 +1,7 @@
 package com.redhat.labs.lodestar.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javax.ws.rs.QueryParam;
@@ -22,6 +24,11 @@ public class GetOptions {
     @Parameter(name = "type", required = false, description = "return only artifacts for the given type. Do not use with engagementUuid")
     @QueryParam("type")
     private String type;
+    
+    @Parameter(name = "region", required = false, description = "return only artifacts for the given region. Do not use with engagementUuid")
+    @QueryParam("region")
+    
+    private List<String> region = new ArrayList<String>();
 
     public Optional<String> getEngagementUuid() {
         return Optional.ofNullable(engagementUuid);
@@ -29,6 +36,14 @@ public class GetOptions {
     
     public Optional<String> getType() {
         return Optional.ofNullable(type);
+    }
+    
+    public List<String> getRegion() {
+        if(region == null) {
+            region = new ArrayList<String>();
+        }
+        
+        return region;
     }
 
 }
