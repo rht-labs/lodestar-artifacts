@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -63,7 +64,7 @@ class ArtifactServiceTest {
 
         // one new
         Artifact newOne = Artifact.builder().engagementUuid(engagementUuid).description("a new artifact")
-                .linkAddress("http://a-new-one").title("New One").type("typeOne").build();
+                .linkAddress("http://a-new-one").title("New One").type("typeOne").region("na").build();
 
         // modify one
         String json = ResourceLoader.load("project-1-artifacts.json");
@@ -75,7 +76,7 @@ class ArtifactServiceTest {
         modifyOne.setDescription("Updated");
 
         // when
-        artifactService.process(Arrays.asList(newOne, modifyOne), Optional.empty(), Optional.empty());
+        artifactService.updateArtifacts(engagementUuid, "na", Arrays.asList(newOne, modifyOne), Optional.empty(), Optional.empty());
 
         // then
         GetListOptions options = new GetListOptions();
@@ -143,6 +144,35 @@ class ArtifactServiceTest {
     }
     
     @Test
+    void testGetArtifactsByRegion() {
+    	 // given
+        GetListOptions options = new GetListOptions();
+        options.setRegion(Collections.singletonList("na"));
+
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
+
+        // then
+        assertNotNull(artifacts);
+        assertEquals(2, artifacts.size());
+    }
+    
+    @Test
+    void testGetArtifactsByRegionAndType() {
+    	 // given
+        GetListOptions options = new GetListOptions();
+        options.setRegion(Collections.singletonList("na"));
+        options.setType("Multimedia");
+
+        // when
+        List<Artifact> artifacts = artifactService.getArtifacts(options);
+
+        // then
+        assertNotNull(artifacts);
+        assertEquals(1, artifacts.size());
+    }
+    
+    @Test
     void testGetArtifactsByTypeException() {
 
         // given
@@ -204,7 +234,39 @@ class ArtifactServiceTest {
     void testCountArtifactsByType() {
 
         // given
-        GetOptions options = new GetOptions(null, "Demo");
+        GetOptions options = new GetOptions(null, "Demo", null);
+
+        // when
+        ArtifactCount count = artifactService.countArtifacts(options);
+
+        // then
+        assertNotNull(count);
+        assertEquals(1, count.getCount());
+
+    }
+    
+    @Test
+    void testCountArtifactsByRegion() {
+
+        // given
+        GetOptions options = new GetOptions(null, "Demo", null);
+
+        // when
+        ArtifactCount count = artifactService.countArtifacts(options);
+
+        // then
+        assertNotNull(count);
+        assertEquals(1, count.getCount());
+
+    }
+    
+    @Test
+    void testCountArtifactsByRegionAndType() {
+
+        // given
+        GetOptions options = new GetOptions(null, "Demo", null);
+        options.setRegion(Collections.singletonList("na"));
+        options.setType("Multimedia");
 
         // when
         ArtifactCount count = artifactService.countArtifacts(options);
@@ -219,7 +281,8 @@ class ArtifactServiceTest {
     void testCountArtifactsByEngagement() {
 
         // given
-        GetOptions options = new GetOptions("1111", null);
+        GetOptions options = new GetOptions("1111", null, null);
+        options.setRegion(Collections.singletonList("na"));
 
         // when
         ArtifactCount count = artifactService.countArtifacts(options);

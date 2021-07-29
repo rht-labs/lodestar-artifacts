@@ -35,33 +35,18 @@ public class ArtifactResource {
 
     @Inject
     ArtifactService service;
-
-    //may need to remove this and only accept by engagement uuid
-    @PUT
-    @APIResponses(value = {
-            @APIResponse(responseCode = "200", description = "The list of artifacts  has been processed."),
-            @APIResponse(responseCode = "400", description = "Invalid list of artifacts provided.") })
-    @Operation(summary = "Artifacts have been processed and persisted.")
-    public Response processArtifacts(@Valid List<Artifact> artifacts,
-            @QueryParam("authorEmail") Optional<String> authorEmail,
-            @QueryParam("authorName") Optional<String> authorName) {
-
-        service.process(artifacts, authorEmail, authorName);
-        return Response.ok().build();
-
-    }
     
     @PUT
     @APIResponses(value = {
             @APIResponse(responseCode = "200", description = "The list of artifacts  has been processed."),
             @APIResponse(responseCode = "400", description = "Invalid list of artifacts provided.") })
     @Operation(summary = "Artifacts have been processed and persisted for engagement.")
-    @Path("/engagement/uuid/{engagementUuid}")
-    public Response processEngagementArtifacts(List<Artifact> artifacts, @PathParam(value="engagementUuid") String engagementUuid,
-            @QueryParam("authorEmail") Optional<String> authorEmail,
+    @Path("/engagement/uuid/{engagementUuid}/{region}")
+    public Response processEngagementArtifacts(@Valid List<Artifact> artifacts, @PathParam(value="engagementUuid") String engagementUuid,
+            @PathParam(value="region") String region, @QueryParam("authorEmail") Optional<String> authorEmail,
             @QueryParam("authorName") Optional<String> authorName) {
 
-        service.updateArtifacts(engagementUuid, artifacts, authorEmail, authorName);
+        service.updateArtifacts(engagementUuid, region, artifacts, authorEmail, authorName);
         return Response.ok().build();
 
     }
@@ -98,9 +83,9 @@ public class ArtifactResource {
     public Response refresh() {
 
         service.purge();
-        service.refresh();
+        long count = service.refresh();
 
-        return Response.accepted().build();
+        return Response.accepted().header("x-total-artifacts", count).build();
 
     }
 
