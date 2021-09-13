@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import io.quarkus.panache.common.Sort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +43,7 @@ class ArtifactTest {
 
 	@Test
 	void testPagedArtifacts() {
-		assertEquals(1, Artifact.pagedArtifacts(0, 1).size());
+		assertEquals(1, Artifact.pagedArtifacts(0, 1, Sort.by("uuid")).size());
 	}
 
 	@Test

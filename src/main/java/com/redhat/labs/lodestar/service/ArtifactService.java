@@ -12,6 +12,7 @@ import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 import javax.ws.rs.WebApplicationException;
 
+import io.quarkus.panache.common.Sort;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.javers.core.ChangesByObject;
@@ -76,7 +77,7 @@ public class ArtifactService {
      * and inserts into the database.
      */
     public long refresh() {
-        engagementRestClient.getAllEngagementProjects().parallelStream().forEach(this::reloadFromGitlabByEngagement);
+        engagementRestClient.getAllEngagements().parallelStream().forEach(this::reloadFromGitlabByEngagement);
         return countArtifacts(new GetOptions()).getCount();
     }
 
@@ -85,7 +86,7 @@ public class ArtifactService {
      * empty {@link List} is returned if {@link File} or its contents are null or
      * blank.
      * 
-     * @param projectId
+     * @param engagement engagement to reload artifacts
      * @return
      */
     void reloadFromGitlabByEngagement(Engagement engagement) {
@@ -170,16 +171,17 @@ public class ArtifactService {
     public List<Artifact> getArtifacts(GetListOptions options) {
         
         if(!options.getRegion().isEmpty() && options.getType().isPresent()) { //by region and type
-            return Artifact.pagedArtifactsByRegionAndType(options.getType().get(), options.getRegion(), options.getPage(), options.getPageSize());
+            return Artifact.pagedArtifactsByRegionAndType(options.getType().get(), options.getRegion(), options.getPage(),
+                    options.getPageSize(), options.getQuerySort());
         }
         
         if(!options.getRegion().isEmpty()) { //by region
-            return Artifact.pagedArtifactsByRegion(options.getRegion(), options.getPage(), options.getPageSize());
+            return Artifact.pagedArtifactsByRegion(options.getRegion(), options.getPage(), options.getPageSize(), options.getQuerySort());
         }
         
         if(options.getType().isPresent()) { //by type
             checkEngagementUuid(options.getEngagementUuid());
-            return Artifact.pagedArtifactsByType(options.getType().get(), options.getPage(), options.getPageSize());
+            return Artifact.pagedArtifactsByType(options.getType().get(), options.getPage(), options.getPageSize(), options.getQuerySort());
         }
 
         Optional<String> engagementUuid = options.getEngagementUuid();
@@ -187,8 +189,12 @@ public class ArtifactService {
         return engagementUuid.isPresent()
                 ? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
                         options.getPageSize()) //by uuid
-                : Artifact.pagedArtifacts(options.getPage(), options.getPageSize()); //all
+                : Artifact.pagedArtifacts(options.getPage(), options.getPageSize(), options.getQuerySort(Sort.descending("modified").and("engagementUuid"))); //all
 
+    }
+
+    public List<ArtifactCount> getArtifactTypeSummary(List<String> regions) {
+        return Artifact.countArtifactsForEachRegionAndType(regions);
     }
     
     private void checkEngagementUuid(Optional<String> engagementUuid) {
@@ -231,8 +237,8 @@ public class ArtifactService {
      * Removes the {@link Artifact} from the database if the object has been
      * removed. Otherwise, creates or updates the {@link Artifact}.
      * 
-     * @param cbo
-     * @param incoming
+     * @param cbo changes
+     * @param incoming update artifacts
      */
     void processObjectChange(ChangesByObject cbo, List<Artifact> incoming) {
 
@@ -258,7 +264,6 @@ public class ArtifactService {
      * Creates or updates the {@link Artifact} in the database.
      * 
      * @param artifact
-     * @return
      */
     void createOrUpdateArtifact(Artifact artifact) {
 
@@ -318,7 +323,6 @@ public class ArtifactService {
      * {@link Artifact}s.
      * 
      * @param engagementUuid
-     * @param artifacts
      * @param authorEmail
      * @param authorName
      * @param commitMessage
@@ -327,7 +331,7 @@ public class ArtifactService {
             Optional<String> authorName, Optional<String> commitMessage) {
 
         // find project by engagement
-        Engagement project = engagementRestClient.getEngagementProjectByUuid(engagementUuid, true);
+        Engagement project = engagementRestClient.getEngagementByUuid(engagementUuid);
 
         List<Artifact> artifacts = Artifact.findAllByEngagementUuid(engagementUuid);
         String content = jsonb.toJson(artifacts);
