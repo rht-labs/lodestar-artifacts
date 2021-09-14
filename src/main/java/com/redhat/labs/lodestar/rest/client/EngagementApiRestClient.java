@@ -16,14 +16,14 @@ import com.redhat.labs.lodestar.model.Engagement;
 @Produces("application/json")
 @RegisterRestClient(configKey = "engagement.api")
 @RegisterProvider(value = GitLabApiExceptionMapper.class, priority = 50)
+@Path("/api/v2/engagements")
 public interface EngagementApiRestClient {
 
     @GET
-    @Path("/api/v1/engagements/projects/{uuid}")
-    Engagement getEngagementProjectByUuid(@PathParam("uuid") String engagementUuid, @QueryParam("mini") boolean mini);
+    @Path("{uuid}")
+    Engagement getEngagementByUuid(@PathParam("uuid") String engagementUuid);
 
     @GET
-    @Path("/api/v1/engagements/projects")
-    List<Engagement> getAllEngagementProjects();
+    List<Engagement> getAllEngagements();
 
 }

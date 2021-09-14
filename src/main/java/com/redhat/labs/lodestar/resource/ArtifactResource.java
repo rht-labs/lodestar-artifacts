@@ -2,6 +2,8 @@ package com.redhat.labs.lodestar.resource;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 
 import javax.inject.Inject;
 import javax.validation.Valid;
@@ -73,6 +75,22 @@ public class ArtifactResource {
     @Operation(summary = "Count of artifacts matching options is returned.")
     public ArtifactCount countArtifacts(@BeanParam GetOptions options) {
         return service.countArtifacts(options);
+    }
+
+    @GET
+    @Path("/types/count")
+    public List<ArtifactCount> countArtifactsByType(@QueryParam("regions") List<String> regions) {
+        return service.getArtifactTypeSummary(regions);
+    }
+
+    @GET
+    @Path("/types")
+    public Set<String> getAllTypes(@QueryParam("regions") List<String> regions) {
+        List<ArtifactCount> counts = service.getArtifactTypeSummary(regions);
+        Set<String> types = new TreeSet<>();
+        counts.forEach(type -> types.add(type.getType()));
+
+        return types;
     }
 
     @PUT

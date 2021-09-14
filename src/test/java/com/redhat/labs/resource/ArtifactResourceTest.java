@@ -61,22 +61,28 @@ class ArtifactResourceTest {
 
 		given().queryParam("engagementUuid", "1111").when().get("/api/artifacts/count").then().statusCode(200)
 				.body("count", equalTo(2));
-
 	}
 
 	@Test
 	void testGetArtifactsAll() {
 
-		JsonPath path = given().when().get("/api/artifacts").then().statusCode(200).extract().jsonPath();
-		assertEquals(2, path.getList(".").size());
+		given().when().get("/api/artifacts").then().statusCode(200).body("size()", equalTo(2));
+	}
 
+	@Test
+	void testGetAllSorted() {
+		given().queryParam("sort", "title|DESC,uuid|ASC").when().get("/api/artifacts")
+				.then().statusCode(200).body("size()", equalTo(2)).body("[0].title", equalTo("Video One"));
+
+		given().queryParam("sort", "title|ASC").when().get("/api/artifacts")
+				.then().statusCode(200).body("size()", equalTo(2)).body("[0].title", equalTo("Demo One"));
 	}
 
 	@Test
 	void testGetArtifactsAllPaged() {
 
 		// first page
-		JsonPath path = given().queryParam("page", 0).queryParam("pageSize", 1).when().get("/api/artifacts").then()
+		JsonPath path = given().queryParam("page", -2).queryParam("pageSize", 1).when().get("/api/artifacts").then()
 				.statusCode(200).extract().jsonPath();
 		assertEquals(1, path.getList(".").size());
 
@@ -115,7 +121,7 @@ class ArtifactResourceTest {
 
 		Artifact a = mockArtifact("1111");
 		a.setTitle(null);
-		String requestBody = jsonb.toJson(Arrays.asList(a));
+		String requestBody = jsonb.toJson(List.of(a));
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111/na").then().statusCode(400);
 
@@ -126,7 +132,7 @@ class ArtifactResourceTest {
 
 		Artifact a = mockArtifact("1111");
 		a.setDescription(null);
-		String requestBody = jsonb.toJson(Arrays.asList(a));
+		String requestBody = jsonb.toJson(List.of(a));
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111/na").then().statusCode(400);
 
@@ -137,7 +143,7 @@ class ArtifactResourceTest {
 
 		Artifact a = mockArtifact("1111");
 		a.setType(null);
-		String requestBody = jsonb.toJson(Arrays.asList(a));
+		String requestBody = jsonb.toJson(List.of(a));
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111/na").then().statusCode(400);
 
@@ -148,7 +154,7 @@ class ArtifactResourceTest {
 
 		Artifact a = mockArtifact("1111");
 		a.setLinkAddress(null);
-		String requestBody = jsonb.toJson(Arrays.asList(a));
+		String requestBody = jsonb.toJson(List.of(a));
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111/na").then().statusCode(400);
 
@@ -158,7 +164,7 @@ class ArtifactResourceTest {
 	void testModifyArtifactsMissingEngagementUuid() {
 
 		Artifact a = mockArtifact(null);
-		String requestBody = jsonb.toJson(Arrays.asList(a));
+		String requestBody = jsonb.toJson(List.of(a));
 
 		given().contentType(ContentType.JSON).body(requestBody).put("/api/artifacts/engagement/uuid/1111/na").then().statusCode(200);
 
@@ -197,6 +203,24 @@ class ArtifactResourceTest {
         boolean newTypeFound = "newType".equals(a0Type) || "newType".equals(a1Type);
         boolean descFound = "UPDATED".equals(a0Desc) || "UPDATED".equals(a1Desc);
         assertTrue(newTypeFound && descFound);
+	}
+
+	@Test
+	void testGetAllTypes() {
+		given().when().get("/api/artifacts/types").then().statusCode(200)
+				.body("size()", equalTo(2))
+				.body("[0]", equalTo("Demo"))
+				.body("[1]", equalTo("Multimedia"));
+	}
+
+	@Test
+	void testGetAllTypesCount() {
+		given().when().get("/api/artifacts/types/count").then().statusCode(200)
+				.body("size()", equalTo(2))
+				.body("[0].type", equalTo("Demo"))
+				.body("[0].count", equalTo(1))
+				.body("[1].type", equalTo("Multimedia"))
+				.body("[1].count", equalTo(1));
 	}
 	
 	Artifact mockArtifact(String engagementUuid) {
