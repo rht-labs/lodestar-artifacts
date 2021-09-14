@@ -120,6 +120,16 @@ public class Artifact extends PanacheMongoEntityBase {
         return mongoCollection().aggregate(bson, ArtifactCount.class).into(new ArrayList<>());
     }
 
+    public static List<ArtifactCount> countArtifactsForEachEngagement() {
+        String count = "count";
+        List<Bson> bson = new ArrayList<>();
+        bson.add(group("$engagementUuid", sum(count, 1)));
+        bson.add(project(fields(include(count), computed("type", "$_id"))));
+        bson.add(sort(orderBy(descending(count), ascending("type"))));
+
+        return mongoCollection().aggregate(bson, ArtifactCount.class).into(new ArrayList<>());
+    }
+
     /**
      * Returns {@link List} of {@link Artifact}s sorted descending on modified
      * timestamp using the page specified.

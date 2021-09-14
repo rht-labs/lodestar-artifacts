@@ -2,10 +2,7 @@ package com.redhat.labs.lodestar.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -154,7 +151,9 @@ public class ArtifactService {
 
                 commitMessage.append(cbo.toString());
                 updateArtifactsFile(engagementUuid, authorEmail, authorName, Optional.ofNullable(commitMessage.toString()));
-
+                if(existing.size() != requestArtifacts.size()) {
+                    engagementRestClient.updateEngagement(engagementUuid, requestArtifacts.size());
+                }
             });
         }
         
@@ -231,6 +230,12 @@ public class ArtifactService {
 
         return count;
 
+    }
+
+    public Map<String, Long> getEngagementCounts() {
+        Map<String, Long> countMap = new HashMap<>();
+        Artifact.countArtifactsForEachEngagement().forEach(e -> countMap.put(e.getType(), e.getCount()));
+        return countMap;
     }
 
     /**
@@ -341,7 +346,6 @@ public class ArtifactService {
 
         // update in git
         gitlabRestClient.updateFile(project.getProjectId(), artifactsFile, file);
-
     }
 
     /**

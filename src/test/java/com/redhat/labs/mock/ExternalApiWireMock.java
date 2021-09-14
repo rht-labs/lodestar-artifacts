@@ -1,17 +1,13 @@
 package com.redhat.labs.mock;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.get;
-import static com.github.tomakehurst.wiremock.client.WireMock.put;
-import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 public class ExternalApiWireMock implements QuarkusTestResourceLifecycleManager {
 
@@ -64,6 +60,9 @@ public class ExternalApiWireMock implements QuarkusTestResourceLifecycleManager 
 
         stubFor(put(urlEqualTo("/api/v4/projects/2/repository/files/engagement%2Fartifacts.json"))
                 .willReturn(aResponse().withHeader("Content-Type", "application/json").withStatus(200)));
+
+
+        stubFor(put(urlMatching("/api/v2/engagements/1111/artifacts/[0-9]")).willReturn(aResponse().withStatus(200)));
 
         // set endpoint
 
