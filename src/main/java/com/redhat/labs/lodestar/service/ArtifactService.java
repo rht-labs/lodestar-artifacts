@@ -158,7 +158,6 @@ public class ArtifactService {
         }
         
     }
-    
 
     /**
      * Returns a {@link List} of {@link Artifact}s matching the specified
@@ -170,7 +169,7 @@ public class ArtifactService {
     public List<Artifact> getArtifacts(GetListOptions options) {
         
         if(!options.getRegion().isEmpty() && options.getType().isPresent()) { //by region and type
-            return Artifact.pagedArtifactsByRegionAndType(options.getType().get(), options.getRegion(), options.getPage(),
+            return Artifact.pagedArtifactsByRegionAndType(options.getType().orElse(""), options.getRegion(), options.getPage(),
                     options.getPageSize(), options.getQuerySort());
         }
         
@@ -180,7 +179,7 @@ public class ArtifactService {
         
         if(options.getType().isPresent()) { //by type
             checkEngagementUuid(options.getEngagementUuid());
-            return Artifact.pagedArtifactsByType(options.getType().get(), options.getPage(), options.getPageSize(), options.getQuerySort());
+            return Artifact.pagedArtifactsByType(options.getType().orElse(""), options.getPage(), options.getPageSize(), options.getQuerySort());
         }
 
         Optional<String> engagementUuid = options.getEngagementUuid();
@@ -211,17 +210,18 @@ public class ArtifactService {
      * @return
      */
     public ArtifactCount countArtifacts(GetOptions options) {
+        String type = options.getType().orElse("");
 
         Optional<String> engagementUuid = options.getEngagementUuid();
 
         ArtifactCount count;
 
         if(!options.getRegion().isEmpty() && options.getType().isPresent()) {
-            count = Artifact.countArtifactsByRegionAndType(options.getType().get(), options.getRegion());
+            count = Artifact.countArtifactsByRegionAndType(type, options.getRegion());
         } else if(!options.getRegion().isEmpty()) {
             count = Artifact.countArtifactsByRegion(options.getRegion());
         } else if(options.getType().isPresent()) {
-            count = Artifact.countArtifactsByType(options.getType().get());
+            count = Artifact.countArtifactsByType(type);
         } else if(engagementUuid.isPresent()) {
             count = Artifact.countArtifactsByEngagementUuid(engagementUuid.get());
         } else {

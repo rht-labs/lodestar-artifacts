@@ -46,22 +46,24 @@ public class GetListOptions extends GetOptions {
             return defaultSort;
         }
         String[] sortAll = sort.split(",");
-        Sort sort = null;
+        Sort querySort = null;
         String direction;
 
         for (String s : sortAll) {
             String[] sortFields = s.split("\\|");
             direction = sortFields.length == 2 ? sortFields[1] : "";
-            if (sort == null) {
-                sort = Sort.by(sortFields[0], getDirection(direction));
+            if (querySort == null) {
+                querySort = Sort.by(sortFields[0], getDirection(direction));
             } else {
-                sort.and(sortFields[0], getDirection(direction));
+                querySort.and(sortFields[0], getDirection(direction));
             }
         }
 
-        sort.and("uuid");
+        if(querySort != null) {
+            querySort.and("uuid");
+        }
 
-        return sort;
+        return querySort;
     }
 
     private Sort.Direction getDirection(String dir) {
