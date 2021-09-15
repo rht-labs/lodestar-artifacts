@@ -186,9 +186,13 @@ public class ArtifactService {
 
         return engagementUuid.isPresent()
                 ? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
-                        options.getPageSize()) //by uuid
+                        options.getPageSize(), options.getQuerySort(Sort.descending("modified"))) //by uuid
                 : Artifact.pagedArtifacts(options.getPage(), options.getPageSize(), options.getQuerySort(Sort.descending("modified").and("engagementUuid"))); //all
 
+    }
+
+    public List<Artifact> getArtifactsByEngagement(String engagementUuid) {
+        return Artifact.pagedArtifactsByEngagementUuid(engagementUuid, 0, 1000, Sort.descending("modified"));
     }
 
     public List<ArtifactCount> getArtifactTypeSummary(List<String> regions) {

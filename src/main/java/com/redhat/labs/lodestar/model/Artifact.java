@@ -173,8 +173,8 @@ public class Artifact extends PanacheMongoEntityBase {
      * @param pageSize
      * @return
      */
-    public static List<Artifact> pagedArtifactsByEngagementUuid(String engagementUuid, int page, int pageSize) {
-        return find("engagementUuid", Sort.descending(MODIFIED), engagementUuid).page(page, pageSize).list();
+    public static List<Artifact> pagedArtifactsByEngagementUuid(String engagementUuid, int page, int pageSize, Sort sort) {
+        return find("engagementUuid", sort, engagementUuid).page(page, pageSize).list();
     }
 
     /**

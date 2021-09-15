@@ -46,7 +46,7 @@ public class ArtifactResource {
             @QueryParam("authorName") Optional<String> authorName) {
 
         service.updateArtifacts(engagementUuid, region, artifacts, authorEmail, authorName);
-        return Response.ok().build();
+        return Response.ok(service.getArtifactsByEngagement(engagementUuid)).build();
 
     }
 

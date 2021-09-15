@@ -86,7 +86,7 @@ class ArtifactServiceTest {
         assertNotNull(updated);
         assertEquals(2, updated.size());
 
-        updated.stream().forEach(a -> {
+        updated.forEach(a -> {
             if (a.getType().equals("Demo")) {
                 assertEquals("Updated", a.getDescription());
             } else if (a.getType().equals("typeOne")) {
@@ -180,9 +180,7 @@ class ArtifactServiceTest {
         options.setType("Demo");
         options.setEngagementUuid("1111");
         
-        WebApplicationException ex = assertThrows(WebApplicationException.class, () -> {
-            artifactService.getArtifacts(options);
-        });
+        WebApplicationException ex = assertThrows(WebApplicationException.class, () -> artifactService.getArtifacts(options));
 
         assertEquals(400, ex.getResponse().getStatus());
 
@@ -287,7 +285,6 @@ class ArtifactServiceTest {
         // when
         ArtifactCount count = artifactService.countArtifacts(options);
 
-        // then
         // then
         assertNotNull(count);
         assertEquals(2, count.getCount());
