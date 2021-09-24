@@ -1,9 +1,6 @@
 package com.redhat.labs.lodestar.resource;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 import javax.inject.Inject;
 import javax.validation.Valid;
@@ -49,7 +46,7 @@ public class ArtifactResource {
             @QueryParam("authorName") Optional<String> authorName) {
 
         service.updateArtifacts(engagementUuid, region, artifacts, authorEmail, authorName);
-        return Response.ok().build();
+        return Response.ok(service.getArtifactsByEngagement(engagementUuid)).build();
 
     }
 
@@ -81,6 +78,12 @@ public class ArtifactResource {
     @Path("/types/count")
     public List<ArtifactCount> countArtifactsByType(@QueryParam("regions") List<String> regions) {
         return service.getArtifactTypeSummary(regions);
+    }
+
+    @GET
+    @Path("engagements/count")
+    public Map<String, Long> getEngagementCounts() {
+        return service.getEngagementCounts();
     }
 
     @GET

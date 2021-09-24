@@ -27,8 +27,7 @@ public class GetOptions {
     
     @Parameter(name = "region", required = false, description = "return only artifacts for the given region. Do not use with engagementUuid")
     @QueryParam("region")
-    
-    private List<String> region = new ArrayList<String>();
+    private List<String> region = new ArrayList<>();
 
     public Optional<String> getEngagementUuid() {
         return Optional.ofNullable(engagementUuid);
@@ -39,11 +38,7 @@ public class GetOptions {
     }
     
     public List<String> getRegion() {
-        if(region == null) {
-            region = new ArrayList<String>();
-        }
-        
-        return region;
+        return region == null ? new ArrayList<>() : region;
     }
 
 }

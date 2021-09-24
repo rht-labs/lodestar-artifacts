@@ -2,10 +2,7 @@ package com.redhat.labs.lodestar.service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -154,12 +151,13 @@ public class ArtifactService {
 
                 commitMessage.append(cbo.toString());
                 updateArtifactsFile(engagementUuid, authorEmail, authorName, Optional.ofNullable(commitMessage.toString()));
-
+                if(existing.size() != requestArtifacts.size()) {
+                    engagementRestClient.updateEngagement(engagementUuid, requestArtifacts.size());
+                }
             });
         }
         
     }
-    
 
     /**
      * Returns a {@link List} of {@link Artifact}s matching the specified
@@ -171,7 +169,7 @@ public class ArtifactService {
     public List<Artifact> getArtifacts(GetListOptions options) {
         
         if(!options.getRegion().isEmpty() && options.getType().isPresent()) { //by region and type
-            return Artifact.pagedArtifactsByRegionAndType(options.getType().get(), options.getRegion(), options.getPage(),
+            return Artifact.pagedArtifactsByRegionAndType(options.getType().orElse(""), options.getRegion(), options.getPage(),
                     options.getPageSize(), options.getQuerySort());
         }
         
@@ -181,16 +179,20 @@ public class ArtifactService {
         
         if(options.getType().isPresent()) { //by type
             checkEngagementUuid(options.getEngagementUuid());
-            return Artifact.pagedArtifactsByType(options.getType().get(), options.getPage(), options.getPageSize(), options.getQuerySort());
+            return Artifact.pagedArtifactsByType(options.getType().orElse(""), options.getPage(), options.getPageSize(), options.getQuerySort());
         }
 
         Optional<String> engagementUuid = options.getEngagementUuid();
 
         return engagementUuid.isPresent()
                 ? Artifact.pagedArtifactsByEngagementUuid(engagementUuid.get(), options.getPage(),
-                        options.getPageSize()) //by uuid
+                        options.getPageSize(), options.getQuerySort(Sort.descending("modified"))) //by uuid
                 : Artifact.pagedArtifacts(options.getPage(), options.getPageSize(), options.getQuerySort(Sort.descending("modified").and("engagementUuid"))); //all
 
+    }
+
+    public List<Artifact> getArtifactsByEngagement(String engagementUuid) {
+        return Artifact.pagedArtifactsByEngagementUuid(engagementUuid, 0, 1000, Sort.descending("modified"));
     }
 
     public List<ArtifactCount> getArtifactTypeSummary(List<String> regions) {
@@ -212,17 +214,18 @@ public class ArtifactService {
      * @return
      */
     public ArtifactCount countArtifacts(GetOptions options) {
+        String type = options.getType().orElse("");
 
         Optional<String> engagementUuid = options.getEngagementUuid();
 
         ArtifactCount count;
 
         if(!options.getRegion().isEmpty() && options.getType().isPresent()) {
-            count = Artifact.countArtifactsByRegionAndType(options.getType().get(), options.getRegion());
+            count = Artifact.countArtifactsByRegionAndType(type, options.getRegion());
         } else if(!options.getRegion().isEmpty()) {
             count = Artifact.countArtifactsByRegion(options.getRegion());
         } else if(options.getType().isPresent()) {
-            count = Artifact.countArtifactsByType(options.getType().get());
+            count = Artifact.countArtifactsByType(type);
         } else if(engagementUuid.isPresent()) {
             count = Artifact.countArtifactsByEngagementUuid(engagementUuid.get());
         } else {
@@ -231,6 +234,12 @@ public class ArtifactService {
 
         return count;
 
+    }
+
+    public Map<String, Long> getEngagementCounts() {
+        Map<String, Long> countMap = new HashMap<>();
+        Artifact.countArtifactsForEachEngagement().forEach(e -> countMap.put(e.getType(), e.getCount()));
+        return countMap;
     }
 
     /**
@@ -341,7 +350,6 @@ public class ArtifactService {
 
         // update in git
         gitlabRestClient.updateFile(project.getProjectId(), artifactsFile, file);
-
     }
 
     /**

@@ -48,7 +48,7 @@ class ArtifactTest {
 
 	@Test
 	void testPagedArtifactsByEngagementUuid() {
-		assertEquals(1, Artifact.pagedArtifactsByEngagementUuid("1111", 0, 1).size());
+		assertEquals(1, Artifact.pagedArtifactsByEngagementUuid("1111", 0, 1, Sort.by("uuid")).size());
 	}
 
 	@Test

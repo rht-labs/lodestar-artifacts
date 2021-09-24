@@ -108,6 +108,11 @@ class ArtifactResourceTest {
 	}
 
 	@Test
+	void testGetEngagementCounts() {
+		given().when().get("/api/artifacts/engagements/count").then().statusCode(200).body("1111", equalTo(2));
+	}
+
+	@Test
 	void testGetArtifactsByUnknownEngagement() {
 
 		JsonPath path = given().queryParam("engagementUuid", "xxx").when().get("/api/artifacts").then()

@@ -120,6 +120,16 @@ public class Artifact extends PanacheMongoEntityBase {
         return mongoCollection().aggregate(bson, ArtifactCount.class).into(new ArrayList<>());
     }
 
+    public static List<ArtifactCount> countArtifactsForEachEngagement() {
+        String count = "count";
+        List<Bson> bson = new ArrayList<>();
+        bson.add(group("$engagementUuid", sum(count, 1)));
+        bson.add(project(fields(include(count), computed("type", "$_id"))));
+        bson.add(sort(orderBy(descending(count), ascending("type"))));
+
+        return mongoCollection().aggregate(bson, ArtifactCount.class).into(new ArrayList<>());
+    }
+
     /**
      * Returns {@link List} of {@link Artifact}s sorted descending on modified
      * timestamp using the page specified.
@@ -163,8 +173,8 @@ public class Artifact extends PanacheMongoEntityBase {
      * @param pageSize
      * @return
      */
-    public static List<Artifact> pagedArtifactsByEngagementUuid(String engagementUuid, int page, int pageSize) {
-        return find("engagementUuid", Sort.descending(MODIFIED), engagementUuid).page(page, pageSize).list();
+    public static List<Artifact> pagedArtifactsByEngagementUuid(String engagementUuid, int page, int pageSize, Sort sort) {
+        return find("engagementUuid", sort, engagementUuid).page(page, pageSize).list();
     }
 
     /**
