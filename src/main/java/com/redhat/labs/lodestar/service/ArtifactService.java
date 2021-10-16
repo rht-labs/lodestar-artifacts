@@ -9,6 +9,12 @@ import javax.inject.Inject;
 import javax.json.bind.Jsonb;
 import javax.ws.rs.WebApplicationException;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.redhat.labs.lodestar.model.gitlab.Action;
+import com.redhat.labs.lodestar.model.gitlab.Commit;
 import io.quarkus.panache.common.Sort;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -58,6 +64,8 @@ public class ArtifactService {
 
     @Inject
     Jsonb jsonb;
+
+    Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     private static final Javers JAVERS = JaversBuilder.javers()
             .withListCompareAlgorithm(ListCompareAlgorithm.LEVENSHTEIN_DISTANCE).build();
@@ -150,7 +158,7 @@ public class ArtifactService {
                 processObjectChange(cbo, requestArtifacts);
 
                 commitMessage.append(cbo.toString());
-                updateArtifactsFile(engagementUuid, authorEmail, authorName, Optional.ofNullable(commitMessage.toString()));
+                updateArtifactsFile(engagementUuid, authorEmail.orElse(defaultAuthorEmail), authorName.orElse(defaultAuthorName), Optional.ofNullable(commitMessage.toString()));
                 if(existing.size() != requestArtifacts.size()) {
                     engagementRestClient.updateEngagement(engagementUuid, requestArtifacts.size());
                 }
@@ -336,8 +344,8 @@ public class ArtifactService {
      * @param authorName
      * @param commitMessage
      */
-    public void updateArtifactsFile(String engagementUuid, Optional<String> authorEmail,
-            Optional<String> authorName, Optional<String> commitMessage) {
+    public void updateArtifactsFile(String engagementUuid, String authorEmail,
+            String authorName, Optional<String> commitMessage) {
 
         // find project by engagement
         Engagement project = engagementRestClient.getEngagementByUuid(engagementUuid);
@@ -345,36 +353,32 @@ public class ArtifactService {
         List<Artifact> artifacts = Artifact.findAllByEngagementUuid(engagementUuid);
         String content = jsonb.toJson(artifacts);
 
-        // create
-        File file = createArtifactsFile(content, defaultBranch, authorName, authorEmail, commitMessage);
+        List<Action> actions = List.of(
+                Action.builder().filePath(artifactsFile).content(content).build(),
+                createLegacyEngagementAction(project.getProjectId(), content)
+        );
+
+        Commit commit = Commit.builder().commitMessage(commitMessage.orElse("Artifact Update")).branch(defaultBranch)
+                .authorEmail(authorEmail).authorName(authorName).actions(actions).build();
 
         // update in git
-        gitlabRestClient.updateFile(project.getProjectId(), artifactsFile, file);
+        gitlabRestClient.createCommit(project.getProjectId(), commit);
     }
 
-    /**
-     * Creates and returns a {@link File} with the given parameters and encodes the
-     * content.
-     * 
-     * @param content
-     * @param branch
-     * @param authorName
-     * @param authorEmail
-     * @param commitMessage
-     * @return
-     */
-    File createArtifactsFile(String content, String branch, Optional<String> authorName, Optional<String> authorEmail,
-            Optional<String> commitMessage) {
+    Action createLegacyEngagementAction(long projectId, String artifactContent) {
+        File f = gitlabRestClient.getFile(projectId, "engagement.json", defaultBranch);
+        f.decodeFileAttributes();
 
-        // create file
-        File artifactFile = File.builder().filePath(artifactsFile).content(content)
-                .authorEmail(authorEmail.orElse(defaultAuthorEmail)).authorName(authorName.orElse(defaultAuthorName))
-                .branch(branch).commitMessage(commitMessage.orElse(defaultCommitMessage)).build();
+        JsonElement element = gson.fromJson(f.getContent(), JsonElement.class);
+        JsonObject engagement = element.getAsJsonObject();
 
-        // encode before sending
-        artifactFile.encodeFileAttributes();
+        element = gson.fromJson(artifactContent, JsonElement.class);
 
-        return artifactFile;
+        engagement.add("artifacts", element);
+        JsonObject sorted = new JsonObject();
+        engagement.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(es -> sorted.add(es.getKey(), es.getValue()));
+
+        return Action.builder().filePath("engagement.json").content(gson.toJson(sorted)).build();
 
     }
 

@@ -1,14 +1,8 @@
 package com.redhat.labs.lodestar.rest.client;
 
-import javax.ws.rs.Encoded;
-import javax.ws.rs.GET;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.*;
 
+import com.redhat.labs.lodestar.model.gitlab.Commit;
 import org.apache.http.NoHttpResponseException;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.rest.client.annotation.RegisterClientHeaders;
@@ -29,11 +23,10 @@ public interface GitlabRestClient {
      * Files
      */
 
-    @PUT
-    @Path("/projects/{id}/repository/files/{file_path}")
+    @POST
+    @Path("/projects/{id}/repository/commits")
     @Produces("application/json")
-    File updateFile(@PathParam("id") @Encoded Long projectId, @PathParam("file_path") @Encoded String filePath,
-            File file);
+    void createCommit(@PathParam("id") long projectId, Commit commit);
 
     @GET
     @Path("/projects/{id}/repository/files/{file_path}")
