@@ -24,7 +24,7 @@ public class GetListOptions extends GetOptions {
     @QueryParam("pageSize")
     private int pageSize;
 
-    @DefaultValue("updated|DESC")
+    @DefaultValue("modified|DESC")
     @Parameter(name = "sort", description = "Sort. Comma separated list field|direction,field|direction. UUID will always be added at the end. Default direction is ASC")
     @QueryParam("sort")
     private String sort;
