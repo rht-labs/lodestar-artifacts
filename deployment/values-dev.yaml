@@ -1,5 +1,7 @@
 name: lodestar-artifacts
 development: true
+#if using quay then you should specify the image location
+buildImage: true
 
 servicePort: 8080
 

@@ -8,7 +8,7 @@ metadata:
 spec:
   lookupPolicy:
     local: false
-  {{- if not .Values.development}}
+  {{- if not .Values.buildImage}}
   tags:
   - annotations: null
     from:
