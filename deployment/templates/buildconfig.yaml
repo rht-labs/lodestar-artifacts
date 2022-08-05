@@ -1,4 +1,4 @@
-{{- if .Values.development }}
+{{- if and .Values.development .Values.buildImage }}
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
 metadata:
